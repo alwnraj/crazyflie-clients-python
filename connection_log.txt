@@ -1,0 +1,38 @@
+2025-08-07 12:48:28,132 - INFO - Initializing Crazyflie drivers...
+2025-08-07 12:48:28,155 - INFO - v3.2 dongle with serial 5B1390DF6B1D8A3F found
+2025-08-07 12:48:28,796 - INFO - Looking for devices....
+2025-08-07 12:48:28,803 - INFO - Initialized PRRT driver.
+2025-08-07 12:48:28,804 - INFO - Found 1 Crazyflie device(s)
+2025-08-07 12:48:28,806 - INFO -   - ['radio://0/80/2M', '']
+2025-08-07 12:48:28,863 - INFO - Scanning for ESP32 serial ports...
+2025-08-07 12:48:28,865 - INFO -   - COM8: USB Serial Device (COM8)
+2025-08-07 12:48:28,867 - INFO -   - COM3: DW5821e Snapdragon X20 LTE Application Interface (COM3)
+2025-08-07 12:48:28,868 - INFO -   - COM7: Intel(R) Active Management Technology - SOL (COM7)
+2025-08-07 12:48:28,870 - INFO -   - COM4: DW5821e Snapdragon X20 LTE NMEA (COM4)
+2025-08-07 12:48:28,872 - INFO -   - COM5: DW5821e Snapdragon X20 LTE Diagnostic (COM5)
+2025-08-07 12:48:28,873 - INFO -   - COM6: DW5821e Snapdragon X20 LTE Modem
+2025-08-07 12:48:28,876 - WARNING - No ESP32 serial ports found!
+2025-08-07 12:48:28,880 - INFO - Attempting to connect to Crazyflie at radio://0/80/2M
+2025-08-07 12:48:28,885 - INFO - Callback->Connection initialized[radio://0/80/2M]
+2025-08-07 12:48:28,899 - INFO - We are connected[radio://0/80/2M], request connection setup
+2025-08-07 12:48:28,902 - INFO - Request _request_protocol_version()
+2025-08-07 12:48:28,905 - INFO - Callback->Connected to [radio://0/80/2M]
+2025-08-07 12:48:39,028 - ERROR - Failed to connect to Crazyflie
+2025-08-07 12:48:39,030 - INFO - Cleaning up connections...
+2025-08-07 12:48:51,343 - WARNING - Got link error callback [Too many packets lost] in state [2]
+2025-08-07 12:48:51,345 - INFO - Callback->Disconnected from [radio://0/80/2M]
+2025-08-07 12:48:51,445 - INFO - Callback->Connection lost to [radio://0/80/2M]: Too many packets lost
+2025-08-07 12:49:02,743 - INFO - Initializing Crazyflie drivers...
+2025-08-07 12:49:02,761 - INFO - v3.2 dongle with serial 5B1390DF6B1D8A3F found
+2025-08-07 12:49:03,457 - INFO - Looking for devices....
+2025-08-07 12:49:03,461 - INFO - Initialized PRRT driver.
+2025-08-07 12:49:03,462 - INFO - Found 0 Crazyflie device(s)
+2025-08-07 12:49:03,498 - INFO - Scanning for ESP32 serial ports...
+2025-08-07 12:49:03,499 - INFO -   - COM8: USB Serial Device (COM8)
+2025-08-07 12:49:03,501 - INFO -   - COM3: DW5821e Snapdragon X20 LTE Application Interface (COM3)
+2025-08-07 12:49:03,502 - INFO -   - COM7: Intel(R) Active Management Technology - SOL (COM7)
+2025-08-07 12:49:03,503 - INFO -   - COM4: DW5821e Snapdragon X20 LTE NMEA (COM4)
+2025-08-07 12:49:03,504 - INFO -   - COM5: DW5821e Snapdragon X20 LTE Diagnostic (COM5)
+2025-08-07 12:49:03,505 - INFO -   - COM6: DW5821e Snapdragon X20 LTE Modem
+2025-08-07 12:49:03,506 - ERROR - No Crazyflie devices found!
+2025-08-07 12:49:03,509 - INFO - Cleaning up connections...
