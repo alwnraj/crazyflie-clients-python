@@ -77,6 +77,8 @@ DEFAULT_URI = 'radio://0/80/2M'  # <-- ADJUST: Change to match your Crazyflie ra
 MAX_THRUST = 60000      # <-- ADJUST: Maximum thrust value (PWM units)
 MIN_THRUST = 100      # <-- ADJUST: Minimum thrust value (motors off)
 HOVER_THRUST = 35000    # <-- ADJUST: Typical hover thrust (for reference, not used in code)
+LOW_BATTERY_VOLTAGE = 3.7
+VERY_LOW_BATTERY_VOLTAGE = 3.5
 
 # CONTROL RATES - How fast control values change when holding keys
 # Higher values = faster response, lower values = slower, more gradual control
@@ -410,10 +412,10 @@ if __name__ == '__main__':
             
             print(f"Battery: {battery_voltage[0]:.2f}V")
             # <-- ADJUST: Battery voltage thresholds (volts)
-            if battery_voltage[0] < 3.7:  # <-- ADJUST: Low battery threshold
-                print("⚠ WARNING: Battery is LOW!")
-            elif battery_voltage[0] < 3.5:  # <-- ADJUST: Very low battery threshold
+            if battery_voltage[0] < VERY_LOW_BATTERY_VOLTAGE:
                 print("⚠⚠ WARNING: Battery is VERY LOW! Consider charging before flight.")
+            elif battery_voltage[0] < LOW_BATTERY_VOLTAGE:
+                print("⚠ WARNING: Battery is LOW!")
             
             # ALTITUDE MONITORING
             # <-- ADJUST: Altitude log period (milliseconds)
@@ -461,4 +463,3 @@ if __name__ == '__main__':
         print("\n" + "=" * 60)
         print("Flight control complete!")
         print("=" * 60)
-

@@ -454,24 +454,25 @@ def run_sequence(cf, trajectory_id, duration, takeoff_x, takeoff_y, pattern_cent
     print(f"Figure-8 amplitude: {FIGURE8_AMPLITUDE}m")
     print("="*60 + "\n")
 
-    # Move to takeoff position if not already there
-    print(f"[FLIGHT] Moving to takeoff position ({takeoff_x:.3f}, {takeoff_y:.3f})...")
+    # Take off first, then move horizontally at flight height. Sending a
+    # horizontal go_to at z=0 before takeoff can scrape across the floor.
+    print(f"[FLIGHT] Taking off to {FLIGHT_HEIGHT}m...")
+    commander.takeoff(FLIGHT_HEIGHT, 2.0)  # EXPERIMENT: Second param = takeoff velocity (m/s)
+    time.sleep(3.0)  # EXPERIMENT: Hover time after takeoff
+
+    trajectory_start_x, trajectory_start_y = pattern_center
+    print(f"[FLIGHT] Moving to trajectory start ({trajectory_start_x:.3f}, {trajectory_start_y:.3f})...")
     current_x = current_position['x']
     current_y = current_position['y']
-    distance = ((takeoff_x - current_x)**2 + (takeoff_y - current_y)**2)**0.5
+    distance = ((trajectory_start_x - current_x)**2 + (trajectory_start_y - current_y)**2)**0.5
     
-    if distance > 0.05:  # If more than 5cm away, move to takeoff position
-        commander.go_to(takeoff_x, takeoff_y, 0.0, 0, 3.0, relative=False)
+    if distance > 0.05:  # If more than 5cm away, move to trajectory start
+        commander.go_to(trajectory_start_x, trajectory_start_y, FLIGHT_HEIGHT, 0, 3.0, relative=False)
         time.sleep(3.5)
-        print(f"[FLIGHT] Reached takeoff position")
+        print(f"[FLIGHT] Reached trajectory start")
     else:
-        print(f"[FLIGHT] Already at takeoff position (distance: {distance:.3f}m)")
+        print(f"[FLIGHT] Already at trajectory start (distance: {distance:.3f}m)")
 
-    # Takeoff to flight height
-    print(f"[FLIGHT] Taking off to {FLIGHT_HEIGHT}m...")
-    commander.takeoff(FLIGHT_HEIGHT, 2.0)  # EXPERIMENT: Second param = takeoff velocity (m/s) - increase for faster takeoff
-    time.sleep(3.0)  # EXPERIMENT: Hover time after takeoff - increased for more relaxed start
-    
     # Check if takeoff position is safe
     is_safe, reason = check_position_safe(
         current_position['x'], 
@@ -490,7 +491,10 @@ def run_sequence(cf, trajectory_id, duration, takeoff_x, takeoff_y, pattern_cent
 
     # Execute figure-8 trajectory with continuous boundary monitoring
     print(f"[FLIGHT] Starting figure-8 trajectory ({duration:.1f}s)...")
-    relative = True
+    # Trajectory coefficients are generated in mocap/world coordinates, so run
+    # them as absolute setpoints. Use relative=True only for origin-centered
+    # trajectories that should be offset from the current position.
+    relative = False
     trajectory_timescale = 0.7  # EXPERIMENT: Timescale (1.0 = normal speed, >1.0 = faster, <1.0 = slower) - lower = slower, more relaxed
     commander.start_trajectory(trajectory_id, trajectory_timescale, relative)
     
@@ -640,4 +644,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

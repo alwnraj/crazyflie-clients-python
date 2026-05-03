@@ -76,7 +76,7 @@ Full manual flight control via gamepad. Requires Crazyflie connected.
 | **Roll** | Left Stick ← → | -30° to +30° | Tilt left/right |
 | **Pitch** | Left Stick ↑ ↓ | -30° to +30° | Tilt forward/back |
 | **Yaw** | Right Stick ← → | -200°/s to +200°/s | Rotate left/right |
-| **Thrust** | Right Stick ↑ ↓ | 10001 to 60000 | Go up/down |
+| **Thrust** | Right Stick ↑ ↓ | 0 to 60000 | Go up/down |
 | **Emergency Stop** | START Button | - | Cut motors immediately |
 | **Alt Hold** | RB Button | - | Maintain altitude (future) |
 
@@ -142,10 +142,9 @@ sudo usermod -a -G input $USER
 ```
 
 ### Wrong Device Path
-If your controller is at `/dev/input/js0` instead of `js1`, edit the scripts:
-```python
-CONTROLLER_DEVICE = '/dev/input/js0'  # Change js1 to js0
-```
+The scripts prefer `/dev/input/js1`, then fall back to the first available
+`/dev/input/js*` device. If you need to force a specific device, edit
+`CONTROLLER_DEVICE` in the scripts.
 
 ### Controller Not Responding
 - Check switch on back of F310 is set to **'D'** (DirectInput)
@@ -210,7 +209,7 @@ The START button sends emergency stop command - motors cut immediately.
 - **Roll**: -30° to +30° (negative = left, positive = right)
 - **Pitch**: -30° to +30° (negative = backward, positive = forward)
 - **Yaw**: -200°/s to +200°/s (negative = CCW, positive = CW)
-- **Thrust**: 10001 to 60000 (10001 = off, ~35000 = hover, 60000 = max)
+- **Thrust**: 0 to 60000 (0 = off, ~35000 = hover, 60000 = max)
 
 ### Deadzone
 A 10% deadzone is active to prevent drift from small stick movements.
@@ -289,4 +288,3 @@ python3 test_flight_with_controller.py
 
 *Controller: Logitech F310 Gamepad (046d:c216)*  
 *Linux Native Support - No additional drivers required*
-

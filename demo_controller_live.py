@@ -20,6 +20,14 @@ JS_EVENT_INIT = 0x80
 
 CONTROLLER_DEVICE = '/dev/input/js1'
 
+# Logitech F310 DirectInput axis mapping. If your controller reports a
+# different layout, adjust these constants and keep test_flight_with_controller.py
+# in sync.
+ROLL_AXIS = 0
+PITCH_AXIS = 1
+YAW_AXIS = 2
+THRUST_AXIS = 3
+
 
 class FlightController:
     """Reads F310 and converts to flight control values"""
@@ -37,18 +45,18 @@ class FlightController:
     
     def get_flight_values(self):
         """Convert raw axes to flight control values"""
-        # Axis 0: Left stick X -> Roll (-30 to +30 degrees)
-        roll = self.apply_deadzone(self.axes[0]) * 30.0
+        # Left stick X -> Roll (-30 to +30 degrees)
+        roll = self.apply_deadzone(self.axes[ROLL_AXIS]) * 30.0
         
-        # Axis 1: Left stick Y -> Pitch (-30 to +30 degrees, inverted)
-        pitch = self.apply_deadzone(-self.axes[1]) * 30.0
+        # Left stick Y -> Pitch (-30 to +30 degrees, inverted)
+        pitch = self.apply_deadzone(-self.axes[PITCH_AXIS]) * 30.0
         
-        # Axis 3: Right stick X -> Yaw (-200 to +200 deg/s)
-        yaw = self.apply_deadzone(self.axes[3]) * 200.0
+        # Right stick X -> Yaw (-200 to +200 deg/s)
+        yaw = self.apply_deadzone(self.axes[YAW_AXIS]) * 200.0
         
-        # Axis 4: Right stick Y -> Thrust (10001 to 60000, inverted)
-        thrust_norm = (-self.axes[4] + 1.0) / 2.0  # Convert -1..1 to 0..1
-        thrust = int(10001 + thrust_norm * 49999)
+        # Right stick Y -> Thrust (0 to 60000, inverted)
+        thrust_norm = (-self.axes[THRUST_AXIS] + 1.0) / 2.0  # Convert -1..1 to 0..1
+        thrust = int(thrust_norm * 60000)
         
         return roll, pitch, yaw, thrust
     
@@ -66,7 +74,8 @@ class FlightController:
 def create_bar(value, width=20, min_val=-1.0, max_val=1.0):
     """Create a visual bar for a value"""
     normalized = (value - min_val) / (max_val - min_val)
-    pos = int(normalized * width)
+    normalized = max(0.0, min(1.0, normalized))
+    pos = min(width - 1, int(normalized * width))
     bar = ['-'] * width
     bar[pos] = '█'
     if pos > 0:
@@ -81,17 +90,18 @@ def demo_controller():
     print("\n" + "=" * 70)
     print(" Logitech F310 Controller - Live Flight Control Demo")
     print("=" * 70)
-    print(f"Device: {CONTROLLER_DEVICE}")
+    controller_device = find_controller_device()
+    print(f"Device: {controller_device}")
     print("\nMove the sticks and press buttons to see real-time values!")
     print("Press Ctrl+C to exit")
     print("=" * 70 + "\n")
     
-    if not os.path.exists(CONTROLLER_DEVICE):
-        print(f"✗ Controller not found at {CONTROLLER_DEVICE}")
+    if not os.path.exists(controller_device):
+        print(f"✗ Controller not found at {controller_device}")
         return False
     
     try:
-        js_file = open(CONTROLLER_DEVICE, "rb")
+        js_file = open(controller_device, "rb")
         fcntl.fcntl(js_file.fileno(), fcntl.F_SETFL, os.O_NONBLOCK)
         
         controller = FlightController()
@@ -131,7 +141,7 @@ def demo_controller():
                 print()
                 
                 # Thrust (vertical)
-                thrust_pct = ((thrust - 10001) / 49999) * 100
+                thrust_pct = (thrust / 60000) * 100
                 print(f"  THRUST:  {thrust:5d}  [{thrust_pct:5.1f}%]  {create_bar(thrust_pct, 30, 0, 100)}")
                 print()
                 
@@ -201,6 +211,19 @@ def demo_controller():
     return True
 
 
+def find_controller_device(preferred=CONTROLLER_DEVICE):
+    """Use the preferred joystick path if present, otherwise the first js device."""
+    if os.path.exists(preferred):
+        return preferred
+
+    for i in range(10):
+        dev = f"/dev/input/js{i}"
+        if os.path.exists(dev):
+            return dev
+
+    return preferred
+
+
 if __name__ == "__main__":
     print("\n🎮 Make sure your Logitech F310 is:")
     print("   - Set to DirectInput mode (switch on back set to 'D')")
@@ -210,4 +233,3 @@ if __name__ == "__main__":
     
     success = demo_controller()
     sys.exit(0 if success else 1)
-

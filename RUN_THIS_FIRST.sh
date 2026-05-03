@@ -9,11 +9,17 @@ echo "  Logitech F310 Controller - Quick Verification"
 echo "============================================================"
 echo ""
 
-# Check if controller device exists
-if [ -e "/dev/input/js1" ]; then
-    echo "✓ Controller found at /dev/input/js1"
+# Check if controller device exists. Prefer js1 for the lab F310 setup, but
+# accept the first joystick device if Linux assigns a different number.
+CONTROLLER_DEVICE="/dev/input/js1"
+if [ ! -e "$CONTROLLER_DEVICE" ]; then
+    CONTROLLER_DEVICE="$(ls /dev/input/js* 2>/dev/null | head -n 1)"
+fi
+
+if [ -n "$CONTROLLER_DEVICE" ] && [ -e "$CONTROLLER_DEVICE" ]; then
+    echo "✓ Controller found at $CONTROLLER_DEVICE"
 else
-    echo "✗ Controller not found at /dev/input/js1"
+    echo "✗ Controller not found"
     echo ""
     echo "Available joystick devices:"
     ls -la /dev/input/js* 2>/dev/null || echo "  None found"
@@ -22,7 +28,7 @@ else
 fi
 
 # Check permissions
-if [ -r "/dev/input/js1" ]; then
+if [ -r "$CONTROLLER_DEVICE" ]; then
     echo "✓ Controller is readable (permissions OK)"
 else
     echo "✗ Cannot read controller (permission issue)"
@@ -53,4 +59,3 @@ echo "  3. Read the quick start guide:"
 echo "     cat CONTROLLER_QUICK_START.md"
 echo ""
 echo "============================================================"
-

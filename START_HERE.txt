@@ -5,7 +5,7 @@
 ╚════════════════════════════════════════════════════════════════════╝
 
 📍 Your Controller:
-   Device: /dev/input/js1
+   Device: /dev/input/js1 preferred; scripts fall back to first /dev/input/js*
    Model:  Logitech F310 Gamepad [DirectInput Mode]
    Status: ✓ WORKING
 
@@ -25,7 +25,7 @@ Run this command:
     ./RUN_THIS_FIRST.sh
 
 Expected output:
-    ✓ Controller found at /dev/input/js1
+    ✓ Controller found at /dev/input/js*
     ✓ Controller is readable (permissions OK)
     ✓ USB Device Info
 
@@ -189,4 +189,3 @@ Documentation:
 ╔════════════════════════════════════════════════════════════════════╗
 ║                    HAPPY FLYING! 🚁                                ║
 ╚════════════════════════════════════════════════════════════════════╝
-

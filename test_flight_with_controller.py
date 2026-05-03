@@ -24,6 +24,13 @@ DEFAULT_URI = 'radio://0/80/2M'
 # Controller device
 CONTROLLER_DEVICE = '/dev/input/js1'  # F310 is usually js1
 
+# Logitech F310 DirectInput axis mapping. Verify with demo_controller_live.py
+# if your OS exposes a different layout.
+ROLL_AXIS = 0
+PITCH_AXIS = 1
+YAW_AXIS = 2
+THRUST_AXIS = 3
+
 # Linux joystick constants
 JS_EVENT_FMT = "IhBB"
 JS_EVENT_SIZE = struct.calcsize(JS_EVENT_FMT)
@@ -33,8 +40,10 @@ JS_EVENT_INIT = 0x80
 
 # Flight parameters
 MAX_THRUST = 60000
-MIN_THRUST = 10001
+MIN_THRUST = 0
 HOVER_THRUST = 35000
+LOW_BATTERY_VOLTAGE = 3.7
+VERY_LOW_BATTERY_VOLTAGE = 3.5
 
 altitude_estimate = [0]
 battery_voltage = [0]
@@ -54,10 +63,11 @@ class ControllerReader:
         self.buttons = {}
         
         # Flight control values (normalized -1.0 to 1.0 or 0.0 to 1.0)
-        self.roll = 0.0      # Axis 0: Left stick X
-        self.pitch = 0.0     # Axis 1: Left stick Y
-        self.yaw = 0.0       # Axis 3: Right stick X
-        self.thrust = 0.0    # Axis 4: Right stick Y (converted to 0-1 range)
+        self.roll = 0.0      # Left stick X
+        self.pitch = 0.0     # Left stick Y
+        self.yaw = 0.0       # Right stick X
+        self.thrust = 0.0    # Right stick Y (converted to 0-1 range)
+        self.thrust_axis_seen = False
         
         # Button states
         self.alt_hold = False  # Button 5: RB
@@ -137,15 +147,16 @@ class ControllerReader:
                             self.axes[number] = normalized
                             
                             # Map axes to flight controls
-                            if number == 0:  # Left stick X - Roll
+                            if number == ROLL_AXIS:  # Left stick X - Roll
                                 self.roll = self._apply_deadzone(normalized)
-                            elif number == 1:  # Left stick Y - Pitch
+                            elif number == PITCH_AXIS:  # Left stick Y - Pitch
                                 self.pitch = self._apply_deadzone(-normalized)  # Invert
-                            elif number == 3:  # Right stick X - Yaw
+                            elif number == YAW_AXIS:  # Right stick X - Yaw
                                 self.yaw = self._apply_deadzone(normalized)
-                            elif number == 4:  # Right stick Y - Thrust
+                            elif number == THRUST_AXIS:  # Right stick Y - Thrust
                                 # Convert from -1...1 to 0...1 (inverted)
                                 self.thrust = (-normalized + 1.0) / 2.0
+                                self.thrust_axis_seen = True
                                 
             except OSError:
                 pass
@@ -168,7 +179,7 @@ class ControllerReader:
         # Convert normalized values to Crazyflie units
         # Roll/Pitch: -30 to +30 degrees
         # Yaw rate: -200 to +200 degrees/sec
-        # Thrust: 10001 to 60000
+        # Thrust: 0 to 60000
         
         roll_deg = self.roll * 30.0
         pitch_deg = self.pitch * 30.0
@@ -176,6 +187,23 @@ class ControllerReader:
         thrust_value = MIN_THRUST + (self.thrust * (MAX_THRUST - MIN_THRUST))
         
         return roll_deg, pitch_deg, yaw_rate, int(thrust_value)
+
+    def thrust_is_low(self, threshold=0.05):
+        """Return True when the sampled thrust stick is near its minimum."""
+        return self.thrust_axis_seen and self.thrust <= threshold
+
+
+def find_controller_device(preferred=CONTROLLER_DEVICE):
+    """Use the preferred joystick path if present, otherwise the first js device."""
+    if os.path.exists(preferred):
+        return preferred
+
+    for i in range(10):
+        dev = f"/dev/input/js{i}"
+        if os.path.exists(dev):
+            return dev
+
+    return preferred
 
 
 def altitude_callback(timestamp, data, logconf):
@@ -205,6 +233,13 @@ def controller_flight(cf, controller):
     print("⚠ Slowly increase thrust with right stick")
     print("\nPress Start button or Ctrl+C to stop\n")
     
+    while not controller.thrust_is_low() and not controller.emergency_stop:
+        print("Waiting for right stick down before enabling flight controls...")
+        time.sleep(0.5)
+
+    if controller.emergency_stop:
+        return
+
     time.sleep(3)
     print("Starting in 3...")
     time.sleep(1)
@@ -252,11 +287,12 @@ if __name__ == '__main__':
     print("Crazyflie Controller Flight Test")
     print("=" * 60)
     print(f"URI: {uri}")
-    print(f"Controller: {CONTROLLER_DEVICE}")
+    controller_device = find_controller_device()
+    print(f"Controller: {controller_device}")
     print("=" * 60)
     
     # Initialize controller
-    controller = ControllerReader(CONTROLLER_DEVICE)
+    controller = ControllerReader(controller_device)
     
     try:
         controller.open()
@@ -289,7 +325,9 @@ if __name__ == '__main__':
             time.sleep(0.5)
             
             print(f"Battery: {battery_voltage[0]:.2f}V")
-            if battery_voltage[0] < 3.7:
+            if battery_voltage[0] < VERY_LOW_BATTERY_VOLTAGE:
+                print("⚠⚠ WARNING: Battery is VERY LOW! Consider charging before flight.")
+            elif battery_voltage[0] < LOW_BATTERY_VOLTAGE:
                 print("⚠ WARNING: Battery is LOW!")
             
             # Altitude monitoring
@@ -326,7 +364,7 @@ if __name__ == '__main__':
                 print("✓ Disarmed")
                 
     except FileNotFoundError:
-        print(f"\n✗ Controller not found at {CONTROLLER_DEVICE}")
+        print(f"\n✗ Controller not found at {controller.device_path}")
         print("Available devices:")
         for i in range(10):
             dev = f"/dev/input/js{i}"
@@ -345,4 +383,3 @@ if __name__ == '__main__':
         print("\n" + "=" * 60)
         print("Flight test complete!")
         print("=" * 60)
-
