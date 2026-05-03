@@ -50,7 +50,10 @@ dependencies = [
         "PyQt6~=6.7.1",
         "PyQt6-sip~=13.8",
         "pysdl2~=0.9.14 ; platform_system=='Windows' or platform_system=='Darwin'",
-        "pysdl2-dll==2.24.0 ; platform_system=='Windows' or platform_system=='Darwin'"
+        "pysdl2-dll==2.24.0 ; platform_system=='Windows' or platform_system=='Darwin'",
+        "pynput~=1.8",  # For keyboard flight control
+        "motioncapture~=1.0a4",  # For motion capture integration
+        "scipy>=1.11"  # For spatial transformations in extpose (compatible with Python 3.10+)
 ]
 
 [project.urls]
