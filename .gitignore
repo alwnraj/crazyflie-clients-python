@@ -29,6 +29,9 @@ msvcp90.dll
 # Jykell files
 docs/.jekyll-metadata
 
+# uv (regenerate locally: uv lock)
+uv.lock
+
 # Python venv
 venv/
 .venv/
