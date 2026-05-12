@@ -1,0 +1,397 @@
+# Session Notes
+
+Date: 2026-05-12
+Repo: `/home/alwin-raj/Desktop/drone/crazyflie-clients-python`
+Branch: `aimslab/work`
+
+## Goal
+
+Work through the local Crazyflie client repo, review recent `alwnraj` changes, get the repo running, validate controller input, and diagnose mocap flight behavior.
+
+## Commit Review
+
+Reviewed reachable commits by author `alwnraj`.
+
+Found one reachable commit:
+
+- `e801be6` - `Fix controller safety and mocap trajectory startup`
+
+Review findings:
+
+1. High: `mocap-extpose-figure8.py` now skips the pre-takeoff relocation to the computed safe launch point and instead takes off from the current position before later safety checks.
+2. Medium: `test_flight_with_controller.py` now waits for low thrust after arming, which can leave the Crazyflie armed indefinitely if the thrust axis is never detected or mapped wrong.
+3. Medium: controller autodiscovery now picks the first `/dev/input/js*` device without verifying it is actually the Logitech F310.
+
+## Repo Run Path
+
+Main app / GUI:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e .
+cfclient
+```
+
+Alternative GUI launch:
+
+```bash
+python3 -m cfclient.gui
+```
+
+Custom controller workflow in this repo:
+
+```bash
+./RUN_THIS_FIRST.sh
+python3 demo_controller_live.py
+python3 test_flight_with_controller.py
+```
+
+## Radio / Connectivity Debugging
+
+Initial mocap example attempts:
+
+```bash
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-example.py
+```
+
+Observed issues:
+
+- `Too many packets lost`
+- `Resource busy`
+
+Interpretation:
+
+- `Too many packets lost` happened while opening the Crazyflie radio link, before mocap logic.
+- `Resource busy` indicated the Crazyradio dongle was already held by another process, likely `cfclient` or a previous crashed script.
+
+Later state:
+
+- radio link became stable
+- mocap example connected
+- VRPN saw rigid body `crazyflie_21`
+- estimator converged successfully
+
+Warnings observed during successful connection:
+
+- VRPN minor version mismatch warning
+- `platform.send_arming_request` deprecation warning
+- Crazyflie reported CRTP protocol version `9`, causing legacy fallback
+- VRPN cleanup warning on shutdown
+
+## Controller Detection Debugging
+
+Problem:
+
+- Logitech controller appeared not to work with `test_logitech_controller.py`
+
+Initial discovery:
+
+```bash
+ls -la /dev/input/js*
+```
+
+showed:
+
+- `/dev/input/js0`
+
+The test script read `/dev/input/js0` but showed:
+
+- empty device name
+- `Axes: 2, Buttons: 2`
+- no useful button/stick response
+
+Device identification:
+
+`/dev/input/js0` turned out to be:
+
+- `Melfas LGD AIT Touch Controller Mouse`
+
+So the script was reading the wrong joystick-class device, not the Logitech pad.
+
+Root cause found by user:
+
+- the Logitech controller was plugged into a dead USB port
+
+After moving to a working port:
+
+- the controller worked correctly
+
+## Manual Controller Flight Validation
+
+The direct controller flight path worked through:
+
+```bash
+python3 test_flight_with_controller.py
+```
+
+Key conclusion:
+
+- low-level command streaming via `cf.commander.send_setpoint(...)` works on this setup
+
+Observed behavior from log output:
+
+- roll, pitch, yaw, and thrust all responded
+- cleanup and disarm worked
+
+Important interpretation:
+
+- the printed `Alt: ...` values in `test_flight_with_controller.py` are not trustworthy as real altitude truth for flight validation
+- the useful signal from that test was that manual command channels were reaching the drone correctly
+
+Manual flight tuning learned by user:
+
+- about `57%` thrust is the practical hover / liftoff sweet spot
+- pitch trim of about `1.8` helps keep the drone stable
+
+## Mocap High-Level Commander Diagnosis
+
+Problem:
+
+- `mocap-map-boundaries.py` armed and printed takeoff messages, but the drone did not actually rise
+- reported position stayed near ground level, around `z ~= 0.03`
+
+Root cause identified:
+
+- controller/manual script uses low-level `send_setpoint(...)`
+- mocap scripts use high-level commander functions like:
+  - `takeoff()`
+  - `go_to()`
+  - `start_trajectory()`
+- GUI code in `src/cfclient/ui/tabs/FlightTab.py` enables `commander.enHighLevel = 1` before using takeoff
+- mocap scripts were not enabling `commander.enHighLevel`
+
+Conclusion:
+
+- on this firmware/setup, high-level motion commands were being ignored until `commander.enHighLevel` was enabled
+
+## Code Changes Made
+
+Made the minimal possible change: enabled the high-level commander in these mocap scripts before issuing high-level commands:
+
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-example.py`
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-map-boundaries.py`
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-boundary-aware.py`
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-figure8.py`
+
+Nature of change:
+
+- added helper `enable_high_level_commander(cf)`
+- called `cf.param.set_value('commander.enHighLevel', '1')`
+- no other flight logic was intentionally changed
+
+## Result After High-Level Enablement
+
+Re-tested:
+
+```bash
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-example.py
+```
+
+Result:
+
+- drone took off quickly and crashed
+
+Interpretation:
+
+- previous "not moving" issue is fixed
+- high-level commander is now actively executing commands
+- current failure is flight behavior / state estimation / frame alignment, not command delivery
+
+## Mocap / Pose Data Observations
+
+User-reported pose at takeoff on ground:
+
+- Quaternions: `0.282, -0.015, 0.09, 0.959`
+- Position: `-0.107 -0.941 0.033`
+
+User-reported pose shortly after takeoff in mid-air:
+
+- Quaternions: `-0.789, -0.005, -0.012, 0.614`
+- Position: `-0.369 0.168 0.091`
+
+Important interpretation:
+
+- a small vertical takeoff should mostly increase `z`
+- instead, `y` changed by about `+1.11 m`
+- `x` changed by about `-0.26 m`
+- `z` changed only from about `0.033` to `0.091`
+
+This strongly suggests frame / pose interpretation problems, such as:
+
+- rigid body origin offset
+- wrong quaternion / axis convention from VRPN
+- mismatch between mocap world frame and estimator expectations
+- bad yaw / orientation alignment causing lateral correction during takeoff
+
+## Later Calibration Findings
+
+User later established a more reliable cage-center reference point:
+
+- cage center reports approximately `0.000 0.000 0.037`
+- first reported horizontal value corresponds to `y`
+- second reported horizontal value corresponds to `x`
+- the reported floor baseline for `z` is about `0.037`
+
+Working interpretation:
+
+- the cage center is the mocap origin in `x/y`
+- `z = 0.037` is effectively the floor-level baseline for this rigid body setup
+- practical height above floor should be treated as:
+  - `height_above_floor = reported_z - 0.037`
+
+Examples:
+
+- reported `z = 0.037` -> on the floor
+- reported `z = 0.137` -> about `10 cm` above the floor
+- reported `z = 0.837` -> about `80 cm` above the floor
+
+This makes the `z` offset itself unsurprising; the larger remaining concern is orientation alignment.
+
+## Orientation Validation Attempts
+
+The user next suspected that `x/y` might actually be fine and that orientation was the real issue.
+
+### First orientation check
+
+User held the drone at a maintained height and reported:
+
+- rightside up:
+  - quaternion: `0.989 0.039 0.003 -0.140`
+- upside-down:
+  - quaternion: `0.543 0.835 0.050 -0.065`
+
+Important caveat:
+
+- upside-down readings were not continuous because the OptiTrack cameras are above the cage
+- this was not a useful yaw-alignment test because flipping upside down mixes roll/pitch and visibility issues
+
+### Flat yaw-style orientation checks
+
+The next recommendation was to keep the drone level and rotate it in 90 degree steps:
+
+- nose forward
+- nose right
+- nose backward
+- nose left
+
+First reported set:
+
+- nose forward:
+  - quaternion: `0.806 -0.068 -0.046 0.586`
+  - position: `0.014 -0.019 0.146`
+- nose right:
+  - quaternion: `0.995 0.002 0.005 -0.099`
+  - position: `0.035 -0.049 0.150`
+- nose backward:
+  - quaternion: `0.688 -0.182 0.727 -0.012`
+  - position: `0.015 -0.037 0.133`
+- nose left:
+  - quaternion: `0.565 0.478 0.572 0.346`
+  - position: `0.040 0.002 0.138`
+
+Issue with that set:
+
+- the user noted the backward sample was actually "nose up"
+- that means pitch contaminated the test, so it did not isolate yaw cleanly
+
+Second reported set, again with quaternions from OptiTrack:
+
+- nose forward:
+  - quaternion: `0.776 -0.020 0.025 0.630`
+  - position: `0.029 -0.017 0.170`
+- nose right:
+  - quaternion: `0.999 -0.020 -0.008 -0.023`
+  - position: `0.034 -0.032 0.152`
+- nose backward:
+  - quaternion: `0.760 0.065 -0.644 -0.065`
+  - position: `0.013 -0.021 0.170`
+- nose left:
+  - quaternion: `0.567 0.555 -0.375 0.480`
+  - position: `0.036 -0.016 0.149`
+
+Issue with that set:
+
+- the user noted the backward case was actually "nose facing down"
+- again, that means the test was not a clean level-only yaw sweep
+
+What these orientation tests do show:
+
+- position stayed relatively stable during manual holding/rotation
+- horizontal position changes were only a few centimeters
+- `z` stayed in a narrow band
+
+Current interpretation:
+
+- position tracking looks much more credible than it did during the autonomous crash
+- orientation tracking is changing, but has not yet been validated in a clean way
+- the autonomous takeoff/crash could still be caused by bad attitude alignment, wrong forward-direction assumptions, or quaternion/frame convention mismatch
+
+## Current Best Understanding
+
+What is confirmed working:
+
+- repo builds and runs in the local venv
+- Crazyradio link works
+- mocap feed connects
+- rigid body `crazyflie_21` is seen
+- Kalman estimator can converge
+- Logitech controller works
+- low-level manual control works
+- cage center / floor baseline are partially calibrated:
+  - `y ~= 0.000`, `x ~= 0.000`, `z ~= 0.037` at cage center on the floor
+
+What is still not trustworthy:
+
+- autonomous mocap takeoff
+- high-level trajectory flight
+- mocap pose / orientation alignment for autonomous stabilization
+- OptiTrack quaternion interpretation for level yaw orientation
+
+## Recommended Next Steps
+
+1. Do not run autonomous mocap trajectory scripts again yet:
+   - `mocap-extpose-example.py`
+   - `mocap-extpose-figure8.py`
+
+2. Validate mocap pose with props off:
+   - stream pose continuously
+   - move the drone by hand along one axis at a time
+   - verify `x`, `y`, and `z` change in expected directions
+   - rotate yaw by hand and verify orientation changes cleanly while the drone stays level
+   - avoid upside-down or pitched tests; they do not isolate yaw
+
+3. Do a conservative props-on manual test:
+   - use controller only
+   - use the known hover thrust around `57%`
+   - use pitch trim around `1.8`
+   - verify whether mocap `z` rises cleanly without large `x/y` jumps
+
+4. Repeat the orientation check on a flat surface if possible:
+   - keep the drone level
+   - record four orientations in 90 degree steps
+   - confirm position stays nearly fixed while the quaternion changes
+
+5. Inspect and correct the mocap pose mapping before further autonomous tests.
+
+6. After frame alignment is trustworthy, retry a minimal autonomous action:
+   - takeoff and land only
+   - no trajectory upload
+   - no figure-8
+
+7. Longer term:
+   - update Crazyflie firmware to reduce protocol/deprecation mismatch risk
+
+## Current Working Tree
+
+Modified files:
+
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-example.py`
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-map-boundaries.py`
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-boundary-aware.py`
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-extpose-figure8.py`
+
+Added file:
+
+- `session.md`

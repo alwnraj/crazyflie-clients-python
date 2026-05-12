@@ -179,6 +179,10 @@ def activate_kalman_estimator(cf):
     cf.param.set_value('stabilizer.estimator', '2')
 
 
+def enable_high_level_commander(cf):
+    cf.param.set_value('commander.enHighLevel', '1')
+
+
 def calculate_bounds_from_corners(corners, z_min=0.0, z_max=2.0):
     """
     Calculate min/max bounds from corner points.
@@ -609,6 +613,7 @@ def main():
         print(f'[INFO] Trajectory uploaded. Total duration: {duration:.1f} seconds')
         
         print("[INFO] Resetting estimator...")
+        enable_high_level_commander(cf)
         reset_estimator(cf)
         print("[INFO] Estimator reset complete. Waiting briefly for convergence...")
         # Give estimator time to receive position updates from mocap

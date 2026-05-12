@@ -127,6 +127,11 @@ def adjust_orientation_sensitivity(cf):
 def activate_kalman_estimator(cf):
     cf.param.set_value('stabilizer.estimator', '2')
 
+
+def enable_high_level_commander(cf):
+    cf.param.set_value('commander.enHighLevel', '1')
+
+
 def upload_trajectory(cf, trajectory_id, trajectory):
     trajectory_mem = cf.mem.get_mems(MemoryElement.TYPE_TRAJ)[0]
     trajectory_mem.trajectory = []
@@ -195,6 +200,8 @@ def main():
         print("Passed Adjust orientation")
         activate_kalman_estimator(cf)
         print("Passed Activating Kalmna estimator")
+        enable_high_level_commander(cf)
+        print("Passed Enabling high-level commander")
         duration = upload_trajectory(cf, trajectory_id, figure8)
         print('The sequence is {:.1f} seconds long'.format(duration))
         reset_estimator(cf)

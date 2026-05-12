@@ -92,6 +92,10 @@ def activate_kalman_estimator(cf):
     cf.param.set_value('stabilizer.estimator', '2')
 
 
+def enable_high_level_commander(cf):
+    cf.param.set_value('commander.enHighLevel', '1')
+
+
 def check_position_safe(x, y, z):
     """
     Check if a position is within safe boundaries.
@@ -248,6 +252,7 @@ def main():
         print("[INFO] Configuring Crazyflie estimator...")
         adjust_orientation_sensitivity(cf)
         activate_kalman_estimator(cf)
+        enable_high_level_commander(cf)
         reset_estimator(cf)
         
         print("[INFO] Waiting for estimator to converge...")
@@ -286,5 +291,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 

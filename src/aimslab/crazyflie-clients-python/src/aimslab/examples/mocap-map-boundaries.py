@@ -78,6 +78,10 @@ def activate_kalman_estimator(cf):
     cf.param.set_value('stabilizer.estimator', '2')
 
 
+def enable_high_level_commander(cf):
+    cf.param.set_value('commander.enHighLevel', '1')
+
+
 def move_direction_until_stopped(cf, direction, description):
     """
     Move the drone slowly in a direction until user stops it.
@@ -308,6 +312,7 @@ def main():
         print("[INFO] Configuring estimator...")
         adjust_orientation_sensitivity(cf)
         activate_kalman_estimator(cf)
+        enable_high_level_commander(cf)
         reset_estimator(cf)
         time.sleep(2.0)
         
@@ -330,5 +335,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
