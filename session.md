@@ -395,3 +395,102 @@ Modified files:
 Added file:
 
 - `session.md`
+
+## 2026-05-13 Update: Guarded Mocap Takeoff Script
+
+User request:
+
+- add the next-step script for a safe mocap-driven takeoff test
+- update this session file so a future agent has context
+- commit and push the change to GitHub
+
+Reason for this step:
+
+- Motive/VRPN pose is now confirmed to stream successfully
+- high-level commander enablement made the drone respond to autonomous commands
+- the autonomous response was not yet safe; the drone took off quickly and crashed
+- therefore the next script should not run trajectories or horizontal paths
+
+Added script:
+
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-takeoff.py`
+
+Purpose:
+
+- connect to the Crazyflie over Crazyradio
+- connect to Motive/VRPN using:
+  - `host_name = '192.168.1.42:3883'`
+  - `mocap_system_type = 'vrpn'`
+  - `rigid_body_name = 'crazyflie_21'`
+- stream full external pose into the Crazyflie with `cf.extpos.send_extpose(...)`
+- require fresh mocap pose before arming
+- require the pose to be stable for a short window before takeoff
+- enable the Kalman estimator and high-level commander
+- reset the estimator while external pose is flowing
+- log `stateEstimate.x/y/z` and print it beside the mocap position
+- require the operator to press ENTER before arming
+- take off only to a low target:
+  - floor baseline: `FLOOR_Z = 0.037`
+  - height above floor: `TAKEOFF_HEIGHT_ABOVE_FLOOR = 0.15`
+  - command target: `TAKEOFF_Z = 0.187`
+- hover briefly
+- land and disarm
+
+Safety guards in the script:
+
+- aborts if mocap pose is stale
+- aborts if start pose is outside the configured cage bounds
+- aborts if pose is not stable enough before takeoff
+- aborts and lands if live pose leaves bounds during takeoff/hover
+- aborts and lands if horizontal drift exceeds `MAX_HORIZONTAL_DRIFT = 0.35`
+- does not upload trajectories
+- does not command horizontal motion
+
+Current default cage bounds in the script:
+
+```python
+CAGE_BOUNDS = {
+    'x_min': -1.5,
+    'x_max': 1.5,
+    'y_min': -1.5,
+    'y_max': 1.5,
+    'z_min': 0.0,
+    'z_max': 2.0,
+}
+SAFETY_MARGIN = 0.20
+```
+
+These are intentionally conservative placeholders. They should be updated with the measured cage bounds once frame alignment and low takeoff are trustworthy.
+
+Recommended run command:
+
+```bash
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-takeoff.py
+```
+
+Recommended physical setup before running:
+
+- Motive is running
+- rigid body `crazyflie_21` is visible
+- Crazyradio is not held by `cfclient` or another script
+- drone is near cage center
+- props on only when ready for the low takeoff test
+- operator has a physical emergency stop / power-off option ready
+
+How to interpret the output:
+
+- mocap and `stateEstimate` positions should be close after estimator reset
+- during takeoff, `z` should rise clearly
+- `x/y` should not jump or drift significantly
+- if the script lands due to stale pose, boundary violation, or drift, do not proceed to trajectory scripts
+
+Next step after this script succeeds:
+
+1. repeat the guarded takeoff a few times from cage center
+2. reduce or explain any mismatch between mocap position and `stateEstimate`
+3. add a guarded small horizontal move script:
+   - take off low
+   - move only `10 cm` along one axis
+   - return to start
+   - land
+4. only after that, revisit boundary mapping or figure-8 trajectories
