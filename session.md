@@ -494,3 +494,53 @@ Next step after this script succeeds:
    - return to start
    - land
 4. only after that, revisit boundary mapping or figure-8 trajectories
+
+## 2026-05-13 Update: Guarded Raw-Thrust Test Script
+
+User asked whether thrust could be controlled directly while keeping the mocap
+guards and estimator setup the same.
+
+Added script:
+
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-thrust-test.py`
+
+Purpose:
+
+- keep the same Motive/VRPN pose streaming path as `mocap-guarded-takeoff.py`
+- keep the Kalman estimator reset and `stateEstimate.x/y/z` comparison logging
+- keep the fresh-pose, stable-pose, cage-boundary, stale-pose, and horizontal
+  drift guards
+- replace high-level `takeoff(...)` with low-level
+  `cf.commander.send_setpoint(roll, pitch, yawrate, thrust)`
+- command zero roll, zero pitch, and zero yaw rate while ramping raw thrust
+
+Default behavior:
+
+- target height is intentionally lower than the high-level takeoff script:
+  - `TARGET_HEIGHT_ABOVE_FLOOR = 0.12`
+  - `TARGET_Z = 0.157`
+- raw thrust ramp starts at `START_THRUST = 20000`
+- ramp ceiling defaults to `MAX_THRUST = 34000`
+- thrust increments by `THRUST_STEP = 400` every `RAMP_INTERVAL = 0.08s`
+- the script cuts thrust if the target height is reached, if any guard trips,
+  or if the operator interrupts it
+
+Recommended run command:
+
+```bash
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-thrust-test.py
+```
+
+Important safety note:
+
+- this is not altitude hold; it is a raw thrust ramp with mocap guardrails
+- if it does not lift by `MAX_THRUST`, the script aborts instead of continuing
+  into the user's observed hover/liftoff range
+- tune `MAX_THRUST` upward only after confirming the ramp behavior is stable
+
+Review / verification before commit:
+
+- `mocap-guarded-thrust-test.py` was reviewed as an uncommitted change
+- no actionable review findings were found
+- syntax check passed with `python3 -m py_compile`
+- whitespace check passed with `git diff --check`
