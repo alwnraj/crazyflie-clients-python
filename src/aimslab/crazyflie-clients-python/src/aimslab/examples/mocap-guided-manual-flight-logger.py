@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Log Logitech controller input and OptiTrack/VRPN pose during a manual flight.
+Guide and log a manual Logitech controller flight with OptiTrack/VRPN pose.
 
 This script does not connect to or command the Crazyflie. That keeps it usable
 while cfclient owns the Crazyradio link for GUI-assisted manual flight.
@@ -21,6 +21,40 @@ DEFAULT_CONTROLLER_DEVICE = '/dev/input/js1'
 DEFAULT_HOST_NAME = '192.168.1.42:3883'
 DEFAULT_RIGID_BODY_NAME = 'crazyflie_21'
 DEFAULT_OUTPUT_DIR = 'flight_logs'
+DEFAULT_GUIDED_PHASES = [
+    (
+        'floor_baseline',
+        'Keep the drone on the floor, props idle, controller centered.',
+    ),
+    (
+        'gentle_takeoff',
+        'Increase thrust only until the drone lifts off into a low hover.',
+    ),
+    (
+        'low_hover',
+        'Hold a low hover with minimal pitch, roll, and yaw input.',
+    ),
+    (
+        'pitch_forward_back',
+        'Use small pitch inputs: forward, release, backward, release.',
+    ),
+    (
+        'roll_right_left',
+        'Use small roll inputs: right, release, left, release.',
+    ),
+    (
+        'yaw_right_left',
+        'Use small yaw inputs: right, release, left, release.',
+    ),
+    (
+        'final_hover',
+        'Return to a quiet low hover with sticks centered except thrust.',
+    ),
+    (
+        'landing',
+        'Land gently, then leave the drone still on the floor.',
+    ),
+]
 
 ROLL_AXIS = 0
 PITCH_AXIS = 1
@@ -119,6 +153,51 @@ class MocapState:
     def snapshot(self):
         with self._lock:
             return self.position, self.quat, self.last_update, self.frame_count
+
+
+class GuidedPhaseController(Thread):
+    def __init__(self, phases):
+        Thread.__init__(self)
+        self.daemon = True
+        self.phases = phases
+        self._lock = Lock()
+        self._phase_index = -1
+        self._phase_name = 'preflight_wait'
+        self._phase_started_at = time.time()
+        self.done = False
+
+    def run(self):
+        print("\n[GUIDE] Guided manual flight plan:")
+        for index, (name, description) in enumerate(self.phases, start=1):
+            print(f"[GUIDE] {index}. {name}: {description}")
+
+        try:
+            for index, (name, description) in enumerate(self.phases, start=1):
+                input(f"\n[GUIDE] Press Enter to start {index}/{len(self.phases)}: {name} ")
+                with self._lock:
+                    self._phase_index = index
+                    self._phase_name = name
+                    self._phase_started_at = time.time()
+                print(f"[GUIDE] ACTIVE {name}: {description}")
+                if index < len(self.phases):
+                    print("[GUIDE] When complete, press Enter to start the next phase.")
+                else:
+                    print("[GUIDE] When complete, press Enter to finish logging.")
+
+            input("\n[GUIDE] Finish guided logging now? ")
+        except EOFError:
+            print("\n[WARN] Stdin closed; guided phase labels will stop advancing.")
+        finally:
+            self.done = True
+
+    def snapshot(self):
+        with self._lock:
+            now = time.time()
+            return {
+                'phase_index': self._phase_index,
+                'phase_name': self._phase_name,
+                'phase_elapsed_s': now - self._phase_started_at,
+            }
 
 
 class ControllerReader(Thread):
@@ -235,7 +314,7 @@ def make_output_path(output):
         path = Path(output)
     else:
         timestamp = time.strftime('%Y%m%d-%H%M%S')
-        path = Path(DEFAULT_OUTPUT_DIR) / f"mocap-controller-flight-{timestamp}.csv"
+        path = Path(DEFAULT_OUTPUT_DIR) / f"mocap-guided-manual-flight-{timestamp}.csv"
 
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
@@ -305,6 +384,9 @@ def build_fieldnames():
     return [
         'wall_time_s',
         'elapsed_s',
+        'phase_index',
+        'phase_name',
+        'phase_elapsed_s',
         'roll_norm',
         'pitch_norm',
         'yaw_norm',
@@ -362,6 +444,7 @@ def log_flight(args):
     rows_written = 0
     started_at = time.time()
     stopped_by_user = False
+    phase_controller = None
 
     try:
         print("[INFO] Waiting for initial mocap pose...")
@@ -375,7 +458,14 @@ def log_flight(args):
             )
 
         print(f"[INFO] Writing CSV log: {output_path}")
-        print("[INFO] Start the cfclient/Logitech flight now. Press Ctrl+C here to stop logging.")
+        if args.freeform:
+            print("[INFO] Free-form mode. Start the cfclient/Logitech flight now.")
+            print("[INFO] Press Ctrl+C here to stop logging.")
+        else:
+            phase_controller = GuidedPhaseController(DEFAULT_GUIDED_PHASES)
+            phase_controller.start()
+            print("[INFO] Guided mode is active. Follow the Enter prompts in this terminal.")
+            print("[INFO] Press Ctrl+C here any time to abort logging.")
 
         with output_path.open('w', newline='') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=build_fieldnames())
@@ -384,6 +474,8 @@ def log_flight(args):
             next_sample_time = time.time()
             while True:
                 if args.duration and time.time() - started_at >= args.duration:
+                    break
+                if phase_controller is not None and phase_controller.done:
                     break
 
                 if controller_reader.error:
@@ -406,6 +498,14 @@ def log_flight(args):
                     'wall_time_s': now,
                     'elapsed_s': now - started_at,
                 }
+                if phase_controller is None:
+                    row.update({
+                        'phase_index': '',
+                        'phase_name': 'freeform',
+                        'phase_elapsed_s': now - started_at,
+                    })
+                else:
+                    row.update(phase_controller.snapshot())
                 row.update(controller_fields)
                 row.update(mocap_fields)
                 writer.writerow(row)
@@ -415,6 +515,7 @@ def log_flight(args):
                     print(
                         "[STATUS] "
                         f"rows={rows_written} elapsed={now - started_at:.1f}s "
+                        f"phase={row['phase_name']} "
                         f"thrust={controller_fields['thrust_raw']} "
                         f"z={mocap_fields['mocap_z']}"
                     )
@@ -434,7 +535,7 @@ def log_flight(args):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Log Logitech controller input and VRPN mocap pose during GUI/manual flight."
+        description="Guide and log Logitech controller input plus VRPN mocap pose during GUI/manual flight."
     )
     parser.add_argument('--controller', default=DEFAULT_CONTROLLER_DEVICE)
     parser.add_argument('--host', default=DEFAULT_HOST_NAME)
@@ -443,6 +544,11 @@ def parse_args():
     parser.add_argument('--duration', type=float, default=0.0, help="seconds; 0 means until Ctrl+C")
     parser.add_argument('--rate-hz', type=float, default=50.0)
     parser.add_argument('--mocap-timeout', type=float, default=8.0)
+    parser.add_argument(
+        '--freeform',
+        action='store_true',
+        help="disable Enter-driven phase prompts and log one continuous free-form flight",
+    )
     return parser.parse_args()
 
 

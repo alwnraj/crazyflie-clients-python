@@ -619,9 +619,9 @@ Important constraint:
 - therefore the logger should not command the drone or connect to Crazyflie by
   default during GUI-assisted flight
 
-Added script:
+Added script, later renamed for clarity:
 
-- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-controller-flight-logger.py`
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guided-manual-flight-logger.py`
 
 Purpose:
 
@@ -632,6 +632,10 @@ Purpose:
 - record controller command values alongside mocap position, quaternion, derived
   height above floor, derived mocap velocity, and horizontal distance from the
   start position
+- label each CSV row with a guided test phase:
+  `floor_baseline`, `gentle_takeoff`, `low_hover`, `pitch_forward_back`,
+  `roll_right_left`, `yaw_right_left`, `final_hover`, or `landing`
+- keep a `--freeform` mode available for one continuous unlabeled flight
 
 Recommended workflow:
 
@@ -640,15 +644,19 @@ Recommended workflow:
 3. in a second terminal, run:
 
 ```bash
-python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-controller-flight-logger.py
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guided-manual-flight-logger.py
 ```
 
-4. perform a short manual test flight:
-   - take off gently
-   - hold a low hover
-   - make very small pitch/roll/yaw inputs one at a time
-   - land
-5. stop the logger with `Ctrl+C`
+4. follow the terminal prompts and press Enter to advance between phases:
+   - floor baseline, props idle
+   - gentle vertical takeoff
+   - low hover
+   - small pitch forward/back
+   - small roll right/left
+   - small yaw right/left
+   - final hover
+   - landing and floor-still logging
+5. after landing, press Enter at the final prompt to stop logging cleanly
 6. provide the generated CSV file for analysis
 
 What the CSV can help estimate:
@@ -659,3 +667,41 @@ What the CSV can help estimate:
 - horizontal drift during nominal hover
 - whether pitch/roll commands correlate with the expected mocap x/y motion
 - whether yaw inputs create unexpected translation or frame-alignment symptoms
+
+## 2026-05-14 Update: Configurable Guarded Thrust Test
+
+User asked to make the guarded thrust script more customizable for thrust and
+orientation variables.
+
+Updated script:
+
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-thrust-test.py`
+
+Changes:
+
+- kept the test configuration as top-of-file constants so the operator can edit
+  the script directly between runs
+- grouped the editable thrust settings:
+  - `CONTROL_MODE`
+  - `START_THRUST`
+  - `MAX_THRUST`
+  - `THRUST_STEP`
+  - `MANUAL_THRUST_PERCENT`
+- grouped the editable orientation settings:
+  - `ROLL_DEG`
+  - `PITCH_DEG`
+  - `YAWRATE_DEG_PER_S`
+- changed raw-thrust defaults back into the valid Crazyflie raw thrust range:
+  - `START_THRUST = 30000`
+  - `MAX_THRUST = 39000`
+  - raw thrust is validated against `0..65535`
+- fixed `manual_percent` mode so zero-thrust priming sends `0%` instead of the
+  configured manual thrust percentage
+- startup output now prints the effective thrust range, control mode, manual
+  percent, roll, pitch, and yaw-rate values for the run
+
+Run command:
+
+```bash
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-thrust-test.py
+```

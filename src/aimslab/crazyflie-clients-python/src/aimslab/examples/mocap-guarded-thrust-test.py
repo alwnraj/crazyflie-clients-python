@@ -56,16 +56,20 @@ TARGET_Z = FLOOR_Z + TARGET_HEIGHT_ABOVE_FLOOR
 # Raw Crazyflie thrust is in the 0..65535 range. The cap and trim below are
 # tuned to the user's manually validated low-hover test window.
 MIN_THRUST = 0
-START_THRUST = 75000
-MAX_THRUST = 79000
+RAW_THRUST_LIMIT = 65535
+
+# Edit these thrust settings between tests.
+CONTROL_MODE = 'raw_ramp'  # 'raw_ramp' or 'manual_percent'
+START_THRUST = 30000
+MAX_THRUST = 39000
 THRUST_STEP = 100
+MANUAL_THRUST_PERCENT = 57.0
 RAMP_INTERVAL = 0.02
 HOVER_DURATION = 1.0
 CUT_THRUST_STEPS = 8
 COMMAND_PRIME_SECONDS = 1.0
-CONTROL_MODE = 'raw_ramp'
-MANUAL_THRUST_PERCENT = 57.0
 
+# Edit these orientation settings between tests.
 ROLL_DEG = 0.0
 PITCH_DEG = 0.0
 YAWRATE_DEG_PER_S = 0.0
@@ -78,6 +82,21 @@ ESTIMATE_MATCH_SECONDS = 1.0
 ESTIMATE_MATCH_TOLERANCE = 0.05
 ESTIMATE_MAX_AGE = 0.30
 PREFLIGHT_COUNTDOWN_SECONDS = 3
+
+
+def validate_config():
+    if CONTROL_MODE not in ('raw_ramp', 'manual_percent'):
+        raise ValueError("CONTROL_MODE must be 'raw_ramp' or 'manual_percent'")
+    if START_THRUST < MIN_THRUST or START_THRUST > RAW_THRUST_LIMIT:
+        raise ValueError(f"START_THRUST must be in {MIN_THRUST}..{RAW_THRUST_LIMIT}")
+    if MAX_THRUST < MIN_THRUST or MAX_THRUST > RAW_THRUST_LIMIT:
+        raise ValueError(f"MAX_THRUST must be in {MIN_THRUST}..{RAW_THRUST_LIMIT}")
+    if START_THRUST > MAX_THRUST:
+        raise ValueError("START_THRUST must be less than or equal to MAX_THRUST")
+    if THRUST_STEP <= 0:
+        raise ValueError("THRUST_STEP must be greater than zero")
+    if MANUAL_THRUST_PERCENT < 0.0 or MANUAL_THRUST_PERCENT > 100.0:
+        raise ValueError("MANUAL_THRUST_PERCENT must be in 0..100")
 
 
 class MocapState:
@@ -374,11 +393,12 @@ def require_live_guards(start_position):
 
 def send_low_level_setpoint(cf, thrust):
     if CONTROL_MODE == 'manual_percent':
+        thrust_percent = 0.0 if thrust <= MIN_THRUST else MANUAL_THRUST_PERCENT
         cf.commander.send_setpoint_manual(
             ROLL_DEG,
             PITCH_DEG,
             YAWRATE_DEG_PER_S,
-            MANUAL_THRUST_PERCENT,
+            thrust_percent,
             False,
         )
     else:
@@ -386,7 +406,7 @@ def send_low_level_setpoint(cf, thrust):
             ROLL_DEG,
             PITCH_DEG,
             YAWRATE_DEG_PER_S,
-            int(max(MIN_THRUST, min(MAX_THRUST, thrust))),
+            int(max(MIN_THRUST, min(MAX_THRUST, RAW_THRUST_LIMIT, thrust))),
         )
 
 
@@ -428,7 +448,7 @@ def prime_low_level_commander(cf):
 
 
 def run_guarded_thrust_test(cf, start_position):
-    print("[FLIGHT] Starting raw-thrust ramp...")
+    print("[FLIGHT] Starting guarded low-level thrust test...")
     current_thrust = START_THRUST
     reached_target = False
     last_status = 0.0
@@ -472,6 +492,8 @@ def run_guarded_thrust_test(cf, start_position):
 
 
 def main():
+    validate_config()
+
     print("=" * 72)
     print("GUARDED MOCAP RAW-THRUST TEST")
     print("=" * 72)
@@ -479,9 +501,14 @@ def main():
     print(f"Target: z={TARGET_Z:.3f}m ({TARGET_HEIGHT_ABOVE_FLOOR:.3f}m above floor)")
     print(f"Thrust ramp: {START_THRUST}..{MAX_THRUST}, step={THRUST_STEP}")
     print(f"Control mode: {CONTROL_MODE}, manual_thrust={MANUAL_THRUST_PERCENT:.1f}%")
-    print(f"Pitch trim: {PITCH_DEG:.1f}deg, countdown={PREFLIGHT_COUNTDOWN_SECONDS}s")
+    print(
+        "Attitude: "
+        f"roll={ROLL_DEG:.1f}deg, pitch={PITCH_DEG:.1f}deg, "
+        f"yawrate={YAWRATE_DEG_PER_S:.1f}deg/s"
+    )
+    print(f"Countdown: {PREFLIGHT_COUNTDOWN_SECONDS}s")
     print(f"Bounds: {CAGE_BOUNDS}, safety_margin={SAFETY_MARGIN:.2f}m")
-    print("This script only commands vertical raw thrust with zero roll/pitch/yawrate.")
+    print("This script only commands the configured low-level setpoints.")
     print(
         "Mocap mode: "
         f"feed_extpose={FEED_MOCAP_TO_CRAZYFLIE}, kalman={USE_KALMAN_ESTIMATOR}"
