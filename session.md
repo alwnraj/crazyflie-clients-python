@@ -605,3 +605,57 @@ Expected behavior:
 - the script should cut thrust once `TARGET_Z = 0.157m` is reached
 - press `Ctrl+C` immediately if the drone moves laterally, rises too fast, or
   looks unstable
+
+## 2026-05-14 Update: Manual Flight Logging Plan
+
+User asked if a logging script could record a GUI-assisted Logitech controller
+test flight so the results can be interpreted later and used to improve the
+autonomous scripts.
+
+Important constraint:
+
+- when `cfclient` is connected and controlling the drone through Crazyradio, a
+  second Python process should not also try to own the Crazyradio link
+- therefore the logger should not command the drone or connect to Crazyflie by
+  default during GUI-assisted flight
+
+Added script:
+
+- `src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-controller-flight-logger.py`
+
+Purpose:
+
+- read Logitech F310 joystick events from `/dev/input/js1` by default
+- connect to Motive/VRPN at `192.168.1.42:3883`
+- track rigid body `crazyflie_21`
+- write a CSV log under `flight_logs/`
+- record controller command values alongside mocap position, quaternion, derived
+  height above floor, derived mocap velocity, and horizontal distance from the
+  start position
+
+Recommended workflow:
+
+1. start Motive and confirm rigid body `crazyflie_21` is visible
+2. start `cfclient` and connect/control the drone with the Logitech controller
+3. in a second terminal, run:
+
+```bash
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-controller-flight-logger.py
+```
+
+4. perform a short manual test flight:
+   - take off gently
+   - hold a low hover
+   - make very small pitch/roll/yaw inputs one at a time
+   - land
+5. stop the logger with `Ctrl+C`
+6. provide the generated CSV file for analysis
+
+What the CSV can help estimate:
+
+- actual liftoff thrust range
+- approximate hover thrust range
+- vertical response delay from thrust changes
+- horizontal drift during nominal hover
+- whether pitch/roll commands correlate with the expected mocap x/y motion
+- whether yaw inputs create unexpected translation or frame-alignment symptoms
