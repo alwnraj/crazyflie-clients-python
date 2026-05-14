@@ -544,3 +544,64 @@ Review / verification before commit:
 - no actionable review findings were found
 - syntax check passed with `python3 -m py_compile`
 - whitespace check passed with `git diff --check`
+
+## 2026-05-14 Update: Motor Lockout Diagnosis
+
+Problem observed:
+
+- `mocap-guarded-thrust-test.py` connected to Crazyflie and OptiTrack/VRPN
+- mocap pose was fresh and stable
+- the script armed, counted down, and ramped raw thrust up to `39000`
+- mocap `z` stayed at the floor baseline around `0.037m`
+- motors did not spin
+
+Diagnostic changes made to the guarded thrust script:
+
+- changed the default URI to match the known-working controller path:
+  - `radio://0/80/2M`
+- added a 3 second command-line preflight countdown
+- added pitch trim from manual testing:
+  - `PITCH_DEG = 1.8`
+- raised the raw thrust test cap to the manually observed low-liftoff range:
+  - `MAX_THRUST = 39000`
+- added a `manual_percent` control mode for comparing against GUI-style
+  percentage thrust
+- temporarily disabled mocap feeding and Kalman setup:
+  - `FEED_MOCAP_TO_CRAZYFLIE = False`
+  - `USE_KALMAN_ESTIMATOR = False`
+- kept mocap active as an external safety monitor for pose, bounds, stale data,
+  and drift checks
+
+Root cause found:
+
+- the Crazyflie was locked out
+- `cfclient` showed the locked state
+- rebooting the Crazyflie cleared the lockout
+- after reboot, the drone/motors worked again
+
+Current conclusion:
+
+- the repeated "motors did not move" result was most likely caused by the
+  Crazyflie lockout state, not by the low-level `send_setpoint(...)` command
+  path itself
+- before interpreting script failures, verify in `cfclient` that the Crazyflie
+  is not locked and that motors respond to manual thrust
+
+Recommended next test:
+
+1. close `cfclient` so the Python script has exclusive Crazyradio access
+2. reboot the Crazyflie
+3. place the drone at cage center with OptiTrack tracking `crazyflie_21`
+4. run:
+
+```bash
+python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-thrust-test.py
+```
+
+Expected behavior:
+
+- motors should begin responding during the thrust ramp
+- mocap `z` should rise from around `0.037m`
+- the script should cut thrust once `TARGET_Z = 0.157m` is reached
+- press `Ctrl+C` immediately if the drone moves laterally, rises too fast, or
+  looks unstable
