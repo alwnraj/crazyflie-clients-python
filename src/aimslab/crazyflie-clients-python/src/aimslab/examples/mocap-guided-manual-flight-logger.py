@@ -64,7 +64,8 @@ THRUST_AXIS = 3
 MAX_ROLL_DEG = 30.0
 MAX_PITCH_DEG = 30.0
 MAX_YAWRATE_DEG_PER_S = 200.0
-MAX_THRUST = 60000
+# Log the full Crazyflie raw thrust range instead of capping controller input.
+MAX_THRUST = 65535
 MIN_THRUST = 0
 DEADZONE = 0.1
 

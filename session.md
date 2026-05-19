@@ -705,3 +705,204 @@ Run command:
 ```bash
 python3 src/aimslab/crazyflie-clients-python/src/aimslab/examples/mocap-guarded-thrust-test.py
 ```
+
+## 2026-05-19 Update: Mocap Vertical Thrust Mapper
+
+Built and tuned a root-level manual thrust mapper:
+
+- `mocap_vertical_thrust_mapper.py`
+
+Purpose:
+
+- keep thrust under manual keyboard control
+- read OptiTrack/VRPN mocap from `crazyflie_21@192.168.1.42:3883`
+- log thrust, mocap pose, battery, drift, velocity, yaw, and correction terms to
+  `flight_logs/mocap-vertical-thrust-map-*.csv`
+- optionally run a conservative mocap-based horizontal hold loop using roll and
+  pitch while leaving thrust manual
+
+Important tuning result:
+
+- `hold-xy` with default pitch sign moved backward too aggressively
+- flipping pitch sign with `--pitch-sign -1` produced near-correct liftoff,
+  hover, and landing
+- the mapper defaults were updated to the successful tuning values:
+  - `kp_xy = 5.0`
+  - `kd_xy = 2.0`
+  - `max_angle_deg = 5.0`
+  - `roll_sign = 1.0`
+  - `pitch_sign = -1.0`
+
+Most useful run command now:
+
+```bash
+python3 mocap_vertical_thrust_mapper.py --mode hold-xy
+```
+
+Latest useful log:
+
+- `flight_logs/mocap-vertical-thrust-map-20260519-104706.csv`
+- reached `z=0.196m` at `35000` raw thrust
+- drift at max height was about `0.065m`
+- drift guard later stopped the run near `0.199m`, which is close to the
+  configured `0.20m` safety limit
+
+## 2026-05-19 Update: Hold-XY and Figure-8 Development
+
+The working focus moved from high-level autonomous takeoff to low-level,
+manual-thrust flight with mocap-assisted horizontal correction.
+
+Current active script:
+
+- `mocap_vertical_thrust_mapper.py`
+
+Current design:
+
+- keyboard controls raw thrust only
+- OptiTrack/VRPN supplies pose for logging and safety guards
+- optional `hold-xy` mode uses mocap position, yaw, and velocity to command
+  roll/pitch corrections
+- optional `figure8` mode moves the horizontal target after the drone is already
+  airborne
+- all runs write detailed CSV logs under `flight_logs/`
+
+Current controls:
+
+- Up / Down: small thrust step
+- PageUp / PageDown: large thrust step
+- Space: immediate thrust cut to zero
+- `q` / Esc: immediate cut, disarm, and exit
+- normal landing should use PageDown, not `q`
+
+Important script defaults / behavior:
+
+- URI: `radio://0/80/2M`
+- VRPN host: `192.168.1.42:3883`
+- rigid body: `crazyflie_21`
+- default mode remains `guard-only`
+- useful test mode is `hold-xy`
+- default XY tuning:
+  - `kp_xy = 5.0`
+  - `kd_xy = 2.0`
+  - `max_angle_deg = 5.0`
+  - `roll_sign = 1.0`
+  - `pitch_sign = -1.0`
+- `--max-commanded-thrust` caps keyboard thrust commands
+- `--max-height-above-start` provides a mocap-based altitude ceiling
+- `--control-activation-height` delays XY roll/pitch correction until the drone
+  is actually airborne
+- when XY control activates, the target is reset to the current airborne
+  position instead of the floor-start position
+- drift guard remains active before XY control activation, so low-altitude
+  sliding or mocap jumps still abort the run
+
+CSV logging now includes:
+
+- raw thrust and thrust percent
+- commanded roll/pitch/yawrate
+- mocap position, quaternion, yaw, pose age, and frame count
+- target position and target error
+- XY-control active flag
+- figure-8 active flag
+- drift from flight-start position
+- estimated horizontal velocity
+- body-frame error and body-frame velocity used by the controller
+- battery voltage
+- Crazyflie `stateEstimate.z`
+
+Important debugging results:
+
+- The earlier "motors do not move" issue was not the script command path; the
+  Crazyflie had been locked in the GUI and needed a reboot.
+- A later no-lift issue was caused by props installed incorrectly. After fixing
+  the props, the drone generated thrust and flew.
+- Battery sag matters. Runs starting around `4.0V` sagged into the `3.65V`
+  range, reducing thrust authority.
+- User observed that above about `60%` thrust the drone climbs aggressively.
+- Practical liftoff/hover region from logs and manual testing is roughly
+  `33000..36000` raw thrust, but it varies with battery state.
+
+Representative log analysis:
+
+- `flight_logs/mocap-vertical-thrust-map-20260519-121256.csv`
+  - best larger manual run
+  - reached `z=1.489m`
+  - returned close to the start in horizontal position
+  - max thrust around `39000`
+  - battery dipped to about `3.50V`
+- `flight_logs/mocap-vertical-thrust-map-20260519-123210.csv`
+  - first real figure-8 attempt
+  - figure-8 activated and logged
+  - max height around `0.31m`
+  - failed on horizontal drift / target error near `0.40m`
+  - conclusion: path was too aggressive for current controller tuning
+- `flight_logs/mocap-vertical-thrust-map-20260519-123812.csv`
+  - figure-8 tracking was acceptable horizontally
+  - failed because height exceeded `0.80m`
+  - conclusion: vertical thrust needed a lower cap / smaller steps
+- `flight_logs/mocap-vertical-thrust-map-20260519-124418.csv`
+  - command cap limited thrust too much
+  - never reached figure-8 trigger height
+  - failed on target error before becoming useful as a figure-8 test
+- `flight_logs/mocap-vertical-thrust-map-20260519-125645.csv`
+  - `pitch_sign=-1` looked better than `pitch_sign=+1`
+  - still mostly low-altitude motion and floor-contact/sliding
+  - motivated the airborne activation gate
+- `flight_logs/mocap-vertical-thrust-map-20260519-130745.csv`
+  - XY activation never occurred because height only rose about `0.026m`
+  - drift reached over `2m` because the first activation patch also delayed the
+    drift guard
+  - fixed by keeping drift guard active before XY activation
+- `flight_logs/mocap-vertical-thrust-map-20260519-131035.csv`
+  - latest analyzed run
+  - XY control activated correctly at `14.67s`
+  - max height was `0.123m`, about `0.086m` above start
+  - max/final drift reached `0.598m` against a `0.600m` guard
+  - final thrust was capped at `35000`
+  - battery sagged to about `3.65V`
+  - conclusion: structurally correct, but still underpowered / too low for
+    stable hold
+
+Latest recommended hold-XY command:
+
+```bash
+python3 mocap_vertical_thrust_mapper.py \
+  --mode hold-xy \
+  --kp-xy 12.0 \
+  --kd-xy 6.0 \
+  --max-angle-deg 10.0 \
+  --pitch-sign -1.0 \
+  --roll-sign 1.0 \
+  --control-activation-height 0.03 \
+  --max-horizontal-drift 0.60 \
+  --max-target-error 0.60 \
+  --max-height-above-start 0.35 \
+  --max-commanded-thrust 36000 \
+  --step 250 \
+  --big-step 500
+```
+
+How to fly the current test:
+
+1. Start with a fresh battery if possible.
+2. Close `cfclient`.
+3. Confirm Motive tracks `crazyflie_21`.
+4. Run the command above.
+5. Use PageUp only until the drone lifts cleanly.
+6. Stop increasing thrust once it is airborne.
+7. Use PageDown to descend.
+8. Use `q` only as an immediate cut/disarm path, not as normal landing.
+
+Current success criterion before returning to figure-8:
+
+- one clean `hold-xy` run
+- height stays below about `0.35m` above start
+- drift stays under roughly `0.25m` for at least `10..15s`
+- battery remains healthy enough that commanded thrust still has authority
+
+Recommended next implementation if hold-XY remains inconsistent:
+
+- add a manual `h` key to activate XY hold after the user visually confirms the
+  drone is airborne
+- optionally add a manual `f` key to start figure-8 after a stable hold
+- keep automatic height-based activation as a fallback
