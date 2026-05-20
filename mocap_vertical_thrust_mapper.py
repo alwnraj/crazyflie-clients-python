@@ -34,6 +34,8 @@ DEFAULT_OUTPUT_DIR = 'flight_logs'
 
 MIN_THRUST = 0
 MAX_THRUST = 65535
+DEFAULT_MAX_COMMANDED_THRUST = 36000
+DEFAULT_MAX_HEIGHT_ABOVE_START = 0.35
 DEFAULT_STEP = 250
 DEFAULT_BIG_STEP = 1000
 COMMAND_PERIOD = 0.02
@@ -362,6 +364,9 @@ def run_keyboard_loop(
 
         key = stdscr.getch()
         if key in (ord('q'), ord('Q'), 27):
+            thrust = 0
+            last_thrust_holder['value'] = thrust
+            send_zero_thrust(cf, count=3)
             message = "Exit requested."
             break
         if key == ord(' '):
@@ -464,8 +469,8 @@ def run_keyboard_loop(
             target_x = control_center_x
             target_y = control_center_y
 
-        target_error_x = position[0] - target_x
-        target_error_y = position[1] - target_y
+        target_error_x = target_x - position[0]
+        target_error_y = target_y - position[1]
         target_error = math.sqrt(target_error_x * target_error_x + target_error_y * target_error_y)
         drift_guard_active = (
             thrust >= args.drift_guard_min_thrust
@@ -710,7 +715,7 @@ def run(args):
             battery, _ = telemetry.snapshot()
             print(f"[INFO] Battery: {battery:.2f} V")
             if battery < VERY_LOW_BATTERY_VOLTAGE:
-                print("[WARN] Battery is very low. Do not fly.")
+                raise RuntimeError("Battery is very low. Do not fly.")
             elif battery < LOW_BATTERY_VOLTAGE:
                 print("[WARN] Battery is low.")
 
@@ -768,7 +773,7 @@ def parse_args():
     parser.add_argument(
         '--max-commanded-thrust',
         type=int,
-        default=MAX_THRUST,
+        default=DEFAULT_MAX_COMMANDED_THRUST,
         help='Upper limit for keyboard-commanded raw thrust.',
     )
     parser.add_argument('--max-horizontal-drift', type=float, default=0.20)
@@ -820,7 +825,7 @@ def parse_args():
     parser.add_argument(
         '--max-height-above-start',
         type=float,
-        default=None,
+        default=DEFAULT_MAX_HEIGHT_ABOVE_START,
         help='Optional safety ceiling above flight-start mocap z, meters.',
     )
     return parser.parse_args()

@@ -21,6 +21,7 @@ from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 DEFAULT_URI = 'radio://0/80/2M'
 MIN_THRUST = 0
 MAX_THRUST = 65535
+DEFAULT_MAX_COMMANDED_THRUST = 36000
 DEFAULT_STEP = 500
 DEFAULT_BIG_STEP = 2500
 COMMAND_PERIOD = 0.02
@@ -52,7 +53,7 @@ def send_zero_thrust(cf, count=10):
     cf.commander.send_stop_setpoint()
 
 
-def draw(stdscr, thrust, telemetry, message):
+def draw(stdscr, thrust, max_commanded_thrust, telemetry, message):
     max_y, max_x = stdscr.getmaxyx()
 
     def add_line(y, x, text):
@@ -74,16 +75,17 @@ def draw(stdscr, thrust, telemetry, message):
     add_line(5, 2, "SPACE            cut thrust to zero")
     add_line(6, 2, "q or ESC         cut, disarm, exit")
     add_line(8, 0, f"Thrust: {thrust:5d} / {MAX_THRUST} ({thrust_pct:5.1f}%)")
-    add_line(9, 0, f"Battery: {telemetry.battery_voltage:0.2f} V")
-    add_line(10, 0, f"Estimator z: {telemetry.altitude:0.2f} m")
-    add_line(12, 0, "Roll/Pitch/Yaw are fixed at zero.")
-    add_line(13, 0, "Keep one hand ready to power off. Ctrl+C also cuts/disarms.")
+    add_line(9, 0, f"Commanded thrust cap: {max_commanded_thrust}")
+    add_line(10, 0, f"Battery: {telemetry.battery_voltage:0.2f} V")
+    add_line(11, 0, f"Estimator z: {telemetry.altitude:0.2f} m")
+    add_line(13, 0, "Roll/Pitch/Yaw are fixed at zero.")
+    add_line(14, 0, "Keep one hand ready to power off. Ctrl+C also cuts/disarms.")
     if message:
-        add_line(15, 0, message)
+        add_line(16, 0, message)
     stdscr.refresh()
 
 
-def run_keyboard_loop(stdscr, cf, telemetry, step, big_step):
+def run_keyboard_loop(stdscr, cf, telemetry, step, big_step, max_commanded_thrust):
     curses.curs_set(0)
     stdscr.nodelay(True)
     stdscr.keypad(True)
@@ -96,30 +98,33 @@ def run_keyboard_loop(stdscr, cf, telemetry, step, big_step):
         key = stdscr.getch()
 
         if key in (ord('q'), ord('Q'), 27):
+            thrust = 0
+            cf.commander.send_setpoint(0.0, 0.0, 0.0, 0)
+            cf.commander.send_stop_setpoint()
             message = "Exit requested."
-            draw(stdscr, thrust, telemetry, message)
+            draw(stdscr, thrust, max_commanded_thrust, telemetry, message)
             return thrust
         if key == ord(' '):
             thrust = 0
             message = "Thrust cut to zero."
         elif key == curses.KEY_UP:
-            thrust = clamp(thrust + step, MIN_THRUST, MAX_THRUST)
+            thrust = clamp(thrust + step, MIN_THRUST, max_commanded_thrust)
             message = f"Thrust increased by {step}."
         elif key == curses.KEY_DOWN:
-            thrust = clamp(thrust - step, MIN_THRUST, MAX_THRUST)
+            thrust = clamp(thrust - step, MIN_THRUST, max_commanded_thrust)
             message = f"Thrust decreased by {step}."
         elif key == curses.KEY_PPAGE:
-            thrust = clamp(thrust + big_step, MIN_THRUST, MAX_THRUST)
+            thrust = clamp(thrust + big_step, MIN_THRUST, max_commanded_thrust)
             message = f"Thrust increased by {big_step}."
         elif key == curses.KEY_NPAGE:
-            thrust = clamp(thrust - big_step, MIN_THRUST, MAX_THRUST)
+            thrust = clamp(thrust - big_step, MIN_THRUST, max_commanded_thrust)
             message = f"Thrust decreased by {big_step}."
 
         cf.commander.send_setpoint(0.0, 0.0, 0.0, thrust)
 
         now = time.time()
         if now - last_draw >= 0.1:
-            draw(stdscr, thrust, telemetry, message)
+            draw(stdscr, thrust, max_commanded_thrust, telemetry, message)
             last_draw = now
 
         time.sleep(COMMAND_PERIOD)
@@ -135,6 +140,7 @@ def run(args):
     print("=" * 72)
     print(f"URI: {args.uri}")
     print(f"Small step: {args.step}, big step: {args.big_step}")
+    print(f"Commanded thrust cap: {args.max_commanded_thrust}")
     print("This script sends zero roll/pitch/yawrate and raw thrust only.")
     print("Close cfclient first; only one process can own the radio.")
     print("=" * 72)
@@ -161,7 +167,7 @@ def run(args):
 
         print(f"Battery: {telemetry.battery_voltage:0.2f} V")
         if telemetry.battery_voltage < VERY_LOW_BATTERY_VOLTAGE:
-            print("WARNING: battery is very low. Do not fly.")
+            raise RuntimeError("Battery is very low. Do not fly.")
         elif telemetry.battery_voltage < LOW_BATTERY_VOLTAGE:
             print("WARNING: battery is low.")
 
@@ -178,6 +184,7 @@ def run(args):
                 telemetry,
                 args.step,
                 args.big_step,
+                args.max_commanded_thrust,
             )
         finally:
             print("\nCutting thrust and disarming...")
@@ -193,7 +200,18 @@ def parse_args():
     parser.add_argument('--uri', default=DEFAULT_URI)
     parser.add_argument('--step', type=int, default=DEFAULT_STEP)
     parser.add_argument('--big-step', type=int, default=DEFAULT_BIG_STEP)
-    return parser.parse_args()
+    parser.add_argument(
+        '--max-commanded-thrust',
+        type=int,
+        default=DEFAULT_MAX_COMMANDED_THRUST,
+        help='Upper limit for keyboard-commanded raw thrust.',
+    )
+    args = parser.parse_args()
+    if args.max_commanded_thrust < MIN_THRUST or args.max_commanded_thrust > MAX_THRUST:
+        raise ValueError(
+            f"--max-commanded-thrust must be between {MIN_THRUST} and {MAX_THRUST}"
+        )
+    return args
 
 
 if __name__ == '__main__':
