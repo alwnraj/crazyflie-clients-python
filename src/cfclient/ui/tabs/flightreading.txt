@@ -1,0 +1,993 @@
+alwin-raj@alwin-raj-ThinkPad-T460s:~/Desktop/optitrack$ ros2 run optitrack publish_mocap_odometry_node
+check_vrpn_cookie(): VRPN Note: minor version number doesn't match: (prefer 'vrpn: ver. 07.38', got 'vrpn: ver. 07.33  0').  This is not normally a problem.
+Attempting connection to VRPN server at: crazyflie_21@192.168.1.42:3883
+[INFO] [1779128248.597126949] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128248.675052248] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128248.685228614] [publish_mocap_odometry_node]: Successfully connected to VRPN server.
+[INFO] [1779128248.745494808] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128248.830529411] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.005 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128248.915794904] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.010532903] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.105629199] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.195526760] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.290592618] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.380890336] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.470561909] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128249.550497326] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.625875489] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128249.721888670] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128249.795507240] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128249.872850426] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128249.950503375] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128250.045501524] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128250.135502787] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128250.225529687] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128250.319017633] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128250.407947427] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128250.505507532] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128250.595867209] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128250.670487113] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128250.750494625] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128250.830552938] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128250.905493315] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128250.980515764] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128251.060587318] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128251.150548116] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128251.245546984] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128251.335516532] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128251.425506072] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128251.520638922] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128251.610481785] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128251.685501533] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128251.771810440] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128251.845503018] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128251.938793538] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.010649726] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.090675124] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.170502155] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.260534026] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128252.355490763] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.450542335] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.540520656] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.005 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128252.630548825] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128252.721822753] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.005 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128252.815629868] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.890529241] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128252.970512332] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128253.045545648] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128253.125480357] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128253.200514806] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128253.280919643] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.007 -0.645
+Position: 0.018 0.006 0.036
+[INFO] [1779128253.355510732] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.018 0.006 0.036
+[INFO] [1779128253.430499733] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.018 0.006 0.036
+[INFO] [1779128253.525500948] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.018 0.006 0.036
+[INFO] [1779128253.620511388] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128253.710504712] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128253.805712059] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128253.895509716] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128253.985496616] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.010 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128254.060619771] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.011 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128254.145549571] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.235557998] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.311497780] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.385523489] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.465514962] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.555499227] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.008 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.650513343] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.745496932] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.835508185] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128254.925635897] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.020500120] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.111425486] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128255.205504155] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.280646223] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.360491558] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.435511820] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.008 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.515490838] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.585505734] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.680540150] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.775491662] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.867821372] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128255.960620214] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.050514027] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.145510343] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.235510363] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.330497192] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.405540886] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.485507061] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.008 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.560503682] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.640502873] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.715736566] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.805616994] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.008 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.900508213] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128256.995481944] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128257.090527762] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128257.175506254] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128257.265523605] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128257.345538586] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128257.440555400] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128257.535506031] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.008 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128257.632608698] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.019 0.006 0.037
+[INFO] [1779128257.720526605] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.037
+[INFO] [1779128257.810510512] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.006 -0.645
+Position: 0.018 0.006 0.036
+[INFO] [1779128257.885855017] [publish_mocap_odometry_node]: Quaternions: -0.764 0.013 -0.007 -0.645
+Position: 0.018 0.006 0.036
+[INFO] [1779128257.960584597] [publish_mocap_odometry_node]: Quaternions: -0.764 0.014 -0.009 -0.645
+Position: 0.018 0.006 0.036
+[INFO] [1779128258.055469850] [publish_mocap_odometry_node]: Quaternions: -0.765 0.012 -0.009 -0.644
+Position: 0.018 0.006 0.037
+[INFO] [1779128258.175491943] [publish_mocap_odometry_node]: Quaternions: -0.765 0.016 -0.002 -0.644
+Position: 0.016 0.006 0.037
+[INFO] [1779128258.240498912] [publish_mocap_odometry_node]: Quaternions: -0.764 0.030 0.019 -0.644
+Position: 0.015 0.008 0.040
+[INFO] [1779128258.336795430] [publish_mocap_odometry_node]: Quaternions: -0.755 -0.014 0.060 -0.653
+Position: 0.017 0.009 0.047
+[INFO] [1779128258.480495081] [publish_mocap_odometry_node]: Quaternions: -0.753 -0.025 0.059 -0.655
+Position: 0.016 0.013 0.067
+[INFO] [1779128258.521005950] [publish_mocap_odometry_node]: Quaternions: -0.749 -0.024 0.057 -0.660
+Position: 0.016 0.015 0.101
+[INFO] [1779128258.615830412] [publish_mocap_odometry_node]: Quaternions: -0.741 -0.035 0.073 -0.667
+Position: 0.019 0.020 0.151
+[INFO] [1779128258.705548680] [publish_mocap_odometry_node]: Quaternions: -0.742 -0.034 0.107 -0.661
+Position: 0.022 0.030 0.216
+[INFO] [1779128258.780538982] [publish_mocap_odometry_node]: Quaternions: -0.738 -0.026 0.113 -0.664
+Position: 0.029 0.041 0.286
+[INFO] [1779128258.863081630] [publish_mocap_odometry_node]: Quaternions: -0.739 -0.024 0.102 -0.666
+Position: 0.038 0.056 0.374
+[INFO] [1779128258.940541343] [publish_mocap_odometry_node]: Quaternions: -0.737 -0.027 0.130 -0.662
+Position: 0.044 0.069 0.455
+[INFO] [1779128259.010553315] [publish_mocap_odometry_node]: Quaternions: -0.735 -0.032 0.130 -0.664
+Position: 0.048 0.083 0.539
+[INFO] [1779128259.090518608] [publish_mocap_odometry_node]: Quaternions: -0.739 -0.032 0.097 -0.665
+Position: 0.049 0.094 0.631
+[INFO] [1779128259.170528117] [publish_mocap_odometry_node]: Quaternions: -0.735 -0.038 0.091 -0.671
+Position: 0.048 0.098 0.701
+[INFO] [1779128259.247195572] [publish_mocap_odometry_node]: Quaternions: -0.740 -0.036 0.088 -0.666
+Position: 0.043 0.099 0.760
+[INFO] [1779128259.340733179] [publish_mocap_odometry_node]: Quaternions: -0.744 -0.037 0.074 -0.663
+Position: 0.035 0.098 0.815
+[INFO] [1779128259.425503110] [publish_mocap_odometry_node]: Quaternions: -0.750 -0.041 0.071 -0.656
+Position: 0.024 0.097 0.855
+[INFO] [1779128259.520533416] [publish_mocap_odometry_node]: Quaternions: -0.755 -0.042 0.058 -0.652
+Position: 0.012 0.101 0.884
+[INFO] [1779128259.615566613] [publish_mocap_odometry_node]: Quaternions: -0.754 -0.042 0.044 -0.654
+Position: 0.001 0.105 0.904
+[INFO] [1779128259.710781127] [publish_mocap_odometry_node]: Quaternions: -0.749 -0.054 0.080 -0.655
+Position: -0.015 0.109 0.914
+[INFO] [1779128259.800506965] [publish_mocap_odometry_node]: Quaternions: -0.748 -0.040 0.080 -0.657
+Position: -0.035 0.115 0.927
+[INFO] [1779128259.895501597] [publish_mocap_odometry_node]: Quaternions: -0.757 -0.025 0.057 -0.651
+Position: -0.063 0.126 0.941
+[INFO] [1779128259.985576609] [publish_mocap_odometry_node]: Quaternions: -0.757 -0.020 0.074 -0.648
+Position: -0.098 0.138 0.950
+[INFO] [1779128260.080538092] [publish_mocap_odometry_node]: Quaternions: -0.760 -0.013 0.071 -0.645
+Position: -0.140 0.154 0.962
+[INFO] [1779128260.155593121] [publish_mocap_odometry_node]: Quaternions: -0.760 -0.012 0.055 -0.647
+Position: -0.181 0.168 0.976
+[INFO] [1779128260.235807615] [publish_mocap_odometry_node]: Quaternions: -0.760 -0.016 0.050 -0.648
+Position: -0.226 0.185 0.992
+[INFO] [1779128260.311469638] [publish_mocap_odometry_node]: Quaternions: -0.761 -0.011 0.031 -0.647
+Position: -0.277 0.207 1.010
+[INFO] [1779128260.386807860] [publish_mocap_odometry_node]: Quaternions: -0.753 -0.016 0.036 -0.657
+Position: -0.325 0.222 1.023
+[INFO] [1779128260.480695372] [publish_mocap_odometry_node]: Quaternions: -0.754 -0.022 0.026 -0.656
+Position: -0.382 0.243 1.035
+[INFO] [1779128260.570632779] [publish_mocap_odometry_node]: Quaternions: -0.753 -0.019 0.046 -0.657
+Position: -0.440 0.256 1.040
+[INFO] [1779128260.665503543] [publish_mocap_odometry_node]: Quaternions: -0.752 -0.020 0.043 -0.658
+Position: -0.494 0.264 1.045
+[INFO] [1779128260.755508423] [publish_mocap_odometry_node]: Quaternions: -0.753 -0.013 0.030 -0.657
+Position: -0.548 0.271 1.046
+[INFO] [1779128260.850507921] [publish_mocap_odometry_node]: Quaternions: -0.755 -0.017 0.052 -0.653
+Position: -0.604 0.271 1.042
+[INFO] [1779128260.940495345] [publish_mocap_odometry_node]: Quaternions: -0.752 -0.017 0.030 -0.659
+Position: -0.660 0.267 1.042
+[INFO] [1779128261.023392142] [publish_mocap_odometry_node]: Quaternions: -0.747 -0.022 0.026 -0.664
+Position: -0.712 0.262 1.041
+[INFO] [1779128261.115510074] [publish_mocap_odometry_node]: Quaternions: -0.743 -0.028 0.033 -0.668
+Position: -0.768 0.259 1.039
+[INFO] [1779128261.207816586] [publish_mocap_odometry_node]: Quaternions: -0.741 -0.027 0.041 -0.670
+Position: -0.822 0.252 1.042
+[INFO] [1779128261.280519370] [publish_mocap_odometry_node]: Quaternions: -0.739 -0.026 0.033 -0.673
+Position: -0.863 0.248 1.050
+[INFO] [1779128261.355515754] [publish_mocap_odometry_node]: Quaternions: -0.744 -0.021 0.016 -0.667
+Position: -0.904 0.247 1.057
+[INFO] [1779128261.450504740] [publish_mocap_odometry_node]: Quaternions: -0.741 -0.029 0.040 -0.670
+Position: -0.953 0.242 1.058
+[INFO] [1779128261.540507943] [publish_mocap_odometry_node]: Quaternions: -0.740 -0.027 0.036 -0.671
+Position: -1.005 0.242 1.061
+[INFO] [1779128261.630513434] [publish_mocap_odometry_node]: Quaternions: -0.745 -0.021 0.024 -0.666
+Position: -1.060 0.246 1.064
+[INFO] [1779128261.725507840] [publish_mocap_odometry_node]: Quaternions: -0.749 -0.023 0.035 -0.661
+Position: -1.123 0.250 1.064
+[INFO] [1779128261.820525003] [publish_mocap_odometry_node]: Quaternions: -0.745 -0.023 0.025 -0.666
+Position: -1.182 0.252 1.066
+[INFO] [1779128261.910497377] [publish_mocap_odometry_node]: Quaternions: -0.740 -0.035 0.029 -0.671
+Position: -1.240 0.254 1.069
+[INFO] [1779128262.000492850] [publish_mocap_odometry_node]: Quaternions: -0.742 -0.030 0.014 -0.669
+Position: -1.296 0.261 1.073
+[INFO] [1779128262.081793129] [publish_mocap_odometry_node]: Quaternions: -0.730 -0.041 0.030 -0.681
+Position: -1.339 0.262 1.074
+[INFO] [1779128262.155688990] [publish_mocap_odometry_node]: Quaternions: -0.734 -0.037 0.024 -0.677
+Position: -1.382 0.267 1.077
+[INFO] [1779128262.235506786] [publish_mocap_odometry_node]: Quaternions: -0.741 -0.032 0.038 -0.670
+Position: -1.428 0.270 1.080
+[INFO] [1779128262.310617691] [publish_mocap_odometry_node]: Quaternions: -0.739 -0.032 0.035 -0.672
+Position: -1.467 0.270 1.086
+[INFO] [1779128262.385497754] [publish_mocap_odometry_node]: Quaternions: -0.742 -0.022 0.014 -0.670
+Position: -1.506 0.270 1.090
+[INFO] [1779128262.465494914] [publish_mocap_odometry_node]: Quaternions: -0.746 -0.024 0.030 -0.665
+Position: -1.548 0.269 1.089
+[INFO] [1779128262.545518547] [publish_mocap_odometry_node]: Quaternions: -0.745 -0.030 0.028 -0.665
+Position: -1.596 0.263 1.087
+[INFO] [1779128262.635518231] [publish_mocap_odometry_node]: Quaternions: -0.741 -0.022 0.006 -0.671
+Position: -1.652 0.255 1.086
+[INFO] [1779128262.730637245] [publish_mocap_odometry_node]: Quaternions: -0.742 -0.033 0.019 -0.669
+Position: -1.712 0.247 1.083
+[INFO] [1779128262.820494226] [publish_mocap_odometry_node]: Quaternions: -0.742 -0.021 0.000 -0.670
+Position: -1.773 0.241 1.086
+[INFO] [1779128262.915522278] [publish_mocap_odometry_node]: Quaternions: -0.744 -0.020 0.005 -0.667
+Position: -1.837 0.234 1.087
+[INFO] [1779128263.000570081] [publish_mocap_odometry_node]: Quaternions: -0.746 -0.017 0.006 -0.665
+Position: -1.899 0.231 1.093
+[INFO] [1779128263.095502790] [publish_mocap_odometry_node]: Quaternions: -0.747 -0.004 -0.022 -0.664
+Position: -1.959 0.233 1.100
+[INFO] [1779128263.190516692] [publish_mocap_odometry_node]: Quaternions: -0.755 -0.003 -0.007 -0.656
+Position: -2.021 0.233 1.100
+[INFO] [1779128263.265729147] [publish_mocap_odometry_node]: Quaternions: -0.751 -0.006 -0.005 -0.660
+Position: -2.069 0.230 1.099
+[INFO] [1779128263.345502843] [publish_mocap_odometry_node]: Quaternions: -0.748 -0.006 -0.021 -0.663
+Position: -2.123 0.228 1.099
+[INFO] [1779128263.435589637] [publish_mocap_odometry_node]: Quaternions: -0.745 -0.003 -0.034 -0.666
+Position: -2.186 0.227 1.095
+[INFO] [1779128263.515513943] [publish_mocap_odometry_node]: Quaternions: -0.741 -0.015 -0.017 -0.671
+Position: -2.238 0.224 1.090
+[INFO] [1779128263.585522730] [publish_mocap_odometry_node]: Quaternions: -0.732 -0.017 -0.022 -0.681
+Position: -2.290 0.221 1.089
+[INFO] [1779128263.680503206] [publish_mocap_odometry_node]: Quaternions: -0.729 -0.021 -0.011 -0.684
+Position: -2.357 0.217 1.090
+[INFO] [1779128263.775506186] [publish_mocap_odometry_node]: Quaternions: -0.731 -0.018 -0.024 -0.681
+Position: -2.422 0.218 1.094
+[INFO] [1779128263.865512567] [publish_mocap_odometry_node]: Quaternions: -0.740 -0.017 -0.011 -0.673
+Position: -2.488 0.217 1.094
+[INFO] [1779128263.960493024] [publish_mocap_odometry_node]: Quaternions: -0.743 -0.010 -0.033 -0.668
+Position: -2.559 0.209 1.090
+[INFO] [1779128264.055504089] [publish_mocap_odometry_node]: Quaternions: -0.745 -0.012 -0.031 -0.666
+Position: -2.625 0.194 1.078
+[INFO] [1779128264.145487238] [publish_mocap_odometry_node]: Quaternions: -0.747 -0.016 -0.019 -0.664
+Position: -2.692 0.174 1.065
+[INFO] [1779128264.240553372] [publish_mocap_odometry_node]: Quaternions: -0.746 -0.021 -0.019 -0.666
+Position: -2.757 0.151 1.060
+[INFO] [1779128264.330544645] [publish_mocap_odometry_node]: Quaternions: -0.745 -0.022 -0.035 -0.666
+Position: -2.818 0.134 1.064
+[INFO] [1779128264.405544815] [publish_mocap_odometry_node]: Quaternions: -0.739 -0.017 -0.051 -0.672
+Position: -2.863 0.123 1.067
+[INFO] [1779128264.480580040] [publish_mocap_odometry_node]: Quaternions: -0.735 -0.020 -0.049 -0.676
+Position: -2.906 0.117 1.067
+[INFO] [1779128264.565501655] [publish_mocap_odometry_node]: Quaternions: -0.744 -0.007 -0.043 -0.667
+Position: -2.953 0.109 1.066
+[INFO] [1779128264.650500019] [publish_mocap_odometry_node]: Quaternions: -0.746 -0.002 -0.043 -0.665
+Position: -2.998 0.100 1.062
+[INFO] [1779128264.745553110] [publish_mocap_odometry_node]: Quaternions: -0.741 -0.004 -0.042 -0.670
+Position: -3.039 0.090 1.057
+[INFO] [1779128264.840503497] [publish_mocap_odometry_node]: Quaternions: -0.735 -0.004 -0.042 -0.676
+Position: -3.080 0.080 1.050
+[INFO] [1779128264.930492310] [publish_mocap_odometry_node]: Quaternions: -0.730 -0.007 -0.038 -0.682
+Position: -3.124 0.067 1.044
+[INFO] [1779128265.020584321] [publish_mocap_odometry_node]: Quaternions: -0.719 -0.012 -0.053 -0.693
+Position: -3.166 0.055 1.045
+[INFO] [1779128265.110640530] [publish_mocap_odometry_node]: Quaternions: -0.710 -0.018 -0.053 -0.702
+Position: -3.210 0.047 1.047
+[INFO] [1779128265.205489907] [publish_mocap_odometry_node]: Quaternions: -0.709 -0.018 -0.047 -0.703
+Position: -3.254 0.041 1.050
+[INFO] [1779128265.300514050] [publish_mocap_odometry_node]: Quaternions: -0.705 -0.018 -0.046 -0.707
+Position: -3.291 0.038 1.053
+[INFO] [1779128265.375739837] [publish_mocap_odometry_node]: Quaternions: -0.715 -0.012 -0.046 -0.697
+Position: -3.323 0.035 1.052
+[INFO] [1779128265.450515665] [publish_mocap_odometry_node]: Quaternions: -0.709 -0.017 -0.041 -0.703
+Position: -3.344 0.031 1.049
+[INFO] [1779128265.530520999] [publish_mocap_odometry_node]: Quaternions: -0.714 -0.016 -0.032 -0.699
+Position: -3.365 0.027 1.044
+[INFO] [1779128265.605495785] [publish_mocap_odometry_node]: Quaternions: -0.718 -0.021 -0.024 -0.695
+Position: -3.384 0.022 1.041
+[INFO] [1779128265.695506601] [publish_mocap_odometry_node]: Quaternions: -0.714 -0.024 -0.027 -0.699
+Position: -3.402 0.017 1.039
+[INFO] [1779128265.790642563] [publish_mocap_odometry_node]: Quaternions: -0.719 -0.025 -0.023 -0.694
+Position: -3.422 0.012 1.038
+[INFO] [1779128265.880726390] [publish_mocap_odometry_node]: Quaternions: -0.722 -0.016 -0.025 -0.691
+Position: -3.438 0.012 1.034
+[INFO] [1779128265.975506732] [publish_mocap_odometry_node]: Quaternions: -0.709 -0.025 -0.007 -0.704
+Position: -3.449 0.017 1.029
+[INFO] [1779128266.071241507] [publish_mocap_odometry_node]: Quaternions: -0.718 -0.016 -0.001 -0.696
+Position: -3.467 0.028 1.029
+[INFO] [1779128266.160516522] [publish_mocap_odometry_node]: Quaternions: -0.708 -0.019 -0.008 -0.706
+Position: -3.479 0.037 1.032
+[INFO] [1779128266.255498936] [publish_mocap_odometry_node]: Quaternions: -0.708 -0.016 -0.018 -0.706
+Position: -3.492 0.046 1.035
+[INFO] [1779128266.345498401] [publish_mocap_odometry_node]: Quaternions: -0.704 -0.022 -0.009 -0.710
+Position: -3.502 0.049 1.033
+[INFO] [1779128266.420518550] [publish_mocap_odometry_node]: Quaternions: -0.703 -0.028 0.003 -0.711
+Position: -3.510 0.049 1.032
+[INFO] [1779128266.500518454] [publish_mocap_odometry_node]: Quaternions: -0.701 -0.023 -0.005 -0.713
+Position: -3.517 0.049 1.034
+[INFO] [1779128266.575587790] [publish_mocap_odometry_node]: Quaternions: -0.702 -0.022 -0.006 -0.712
+Position: -3.522 0.049 1.035
+[INFO] [1779128266.650500825] [publish_mocap_odometry_node]: Quaternions: -0.702 -0.024 0.000 -0.712
+Position: -3.527 0.049 1.037
+[INFO] [1779128266.730505262] [publish_mocap_odometry_node]: Quaternions: -0.701 -0.024 -0.005 -0.712
+Position: -3.531 0.049 1.039
+[INFO] [1779128266.820526819] [publish_mocap_odometry_node]: Quaternions: -0.702 -0.022 -0.010 -0.711
+Position: -3.535 0.048 1.040
+[INFO] [1779128266.911313281] [publish_mocap_odometry_node]: Quaternions: -0.701 -0.025 -0.007 -0.713
+Position: -3.540 0.047 1.041
+[INFO] [1779128267.005610471] [publish_mocap_odometry_node]: Quaternions: -0.700 -0.025 -0.009 -0.713
+Position: -3.543 0.047 1.042
+[INFO] [1779128267.100490837] [publish_mocap_odometry_node]: Quaternions: -0.702 -0.024 -0.010 -0.712
+Position: -3.548 0.047 1.043
+[INFO] [1779128267.195646007] [publish_mocap_odometry_node]: Quaternions: -0.702 -0.026 -0.007 -0.711
+Position: -3.550 0.046 1.045
+[INFO] [1779128267.290489556] [publish_mocap_odometry_node]: Quaternions: -0.702 -0.027 -0.006 -0.712
+Position: -3.551 0.043 1.046
+[INFO] [1779128267.380508276] [publish_mocap_odometry_node]: Quaternions: -0.701 -0.034 0.008 -0.712
+Position: -3.551 0.037 1.047
+[INFO] [1779128267.470801289] [publish_mocap_odometry_node]: Quaternions: -0.699 -0.033 -0.001 -0.715
+Position: -3.549 0.026 1.050
+[INFO] [1779128267.565503384] [publish_mocap_odometry_node]: Quaternions: -0.694 -0.028 -0.011 -0.719
+Position: -3.546 0.006 1.054
+[INFO] [1779128267.640603604] [publish_mocap_odometry_node]: Quaternions: -0.690 -0.026 -0.014 -0.723
+Position: -3.541 -0.016 1.058
+[INFO] [1779128267.720573651] [publish_mocap_odometry_node]: Quaternions: -0.685 -0.019 -0.027 -0.728
+Position: -3.532 -0.046 1.062
+[INFO] [1779128267.795598720] [publish_mocap_odometry_node]: Quaternions: -0.676 -0.022 -0.020 -0.736
+Position: -3.521 -0.078 1.063
+[INFO] [1779128267.870513857] [publish_mocap_odometry_node]: Quaternions: -0.673 -0.025 -0.010 -0.739
+Position: -3.510 -0.116 1.061
+[INFO] [1779128267.960755478] [publish_mocap_odometry_node]: Quaternions: -0.671 -0.020 -0.016 -0.741
+Position: -3.498 -0.169 1.060
+[INFO] [1779128268.055502033] [publish_mocap_odometry_node]: Quaternions: -0.668 -0.019 -0.018 -0.743
+Position: -3.488 -0.224 1.061
+[INFO] [1779128268.150500737] [publish_mocap_odometry_node]: Quaternions: -0.671 -0.014 -0.032 -0.740
+Position: -3.479 -0.276 1.066
+[INFO] [1779128268.240660817] [publish_mocap_odometry_node]: Quaternions: -0.676 -0.020 -0.011 -0.737
+Position: -3.469 -0.323 1.073
+[INFO] [1779128268.335547617] [publish_mocap_odometry_node]: Quaternions: -0.673 -0.015 -0.018 -0.739
+Position: -3.455 -0.374 1.084
+[INFO] [1779128268.430509942] [publish_mocap_odometry_node]: Quaternions: -0.667 -0.002 -0.049 -0.743
+Position: -3.440 -0.414 1.095
+[INFO] [1779128268.520561667] [publish_mocap_odometry_node]: Quaternions: -0.664 -0.008 -0.033 -0.747
+Position: -3.429 -0.450 1.098
+[INFO] [1779128268.610508961] [publish_mocap_odometry_node]: Quaternions: -0.665 -0.009 -0.030 -0.747
+Position: -3.424 -0.486 1.097
+[INFO] [1779128268.690544740] [publish_mocap_odometry_node]: Quaternions: -0.660 -0.012 -0.034 -0.751
+Position: -3.421 -0.515 1.095
+[INFO] [1779128268.765802700] [publish_mocap_odometry_node]: Quaternions: -0.658 -0.018 -0.032 -0.752
+Position: -3.421 -0.547 1.090
+[INFO] [1779128268.841180017] [publish_mocap_odometry_node]: Quaternions: -0.654 -0.029 -0.020 -0.756
+Position: -3.422 -0.583 1.085
+[INFO] [1779128268.920534191] [publish_mocap_odometry_node]: Quaternions: -0.652 -0.032 -0.020 -0.757
+Position: -3.426 -0.627 1.085
+[INFO] [1779128269.000833687] [publish_mocap_odometry_node]: Quaternions: -0.654 -0.026 -0.041 -0.755
+Position: -3.430 -0.668 1.088
+[INFO] [1779128269.090487340] [publish_mocap_odometry_node]: Quaternions: -0.642 -0.036 -0.052 -0.764
+Position: -3.430 -0.717 1.090
+[INFO] [1779128269.180602726] [publish_mocap_odometry_node]: Quaternions: -0.642 -0.034 -0.046 -0.764
+Position: -3.429 -0.768 1.093
+[INFO] [1779128269.277794556] [publish_mocap_odometry_node]: Quaternions: -0.633 -0.023 -0.056 -0.772
+Position: -3.420 -0.814 1.102
+[INFO] [1779128269.370508074] [publish_mocap_odometry_node]: Quaternions: -0.626 -0.028 -0.043 -0.778
+Position: -3.414 -0.862 1.106
+[INFO] [1779128269.460520832] [publish_mocap_odometry_node]: Quaternions: -0.625 -0.020 -0.056 -0.778
+Position: -3.410 -0.905 1.105
+[INFO] [1779128269.555504465] [publish_mocap_odometry_node]: Quaternions: -0.623 -0.025 -0.047 -0.780
+Position: -3.408 -0.952 1.097
+[INFO] [1779128269.647512049] [publish_mocap_odometry_node]: Quaternions: -0.631 -0.016 -0.038 -0.775
+Position: -3.408 -1.003 1.087
+[INFO] [1779128269.735492348] [publish_mocap_odometry_node]: Quaternions: -0.635 -0.021 -0.040 -0.771
+Position: -3.405 -1.059 1.083
+[INFO] [1779128269.830524954] [publish_mocap_odometry_node]: Quaternions: -0.644 -0.007 -0.040 -0.764
+Position: -3.403 -1.117 1.084
+[INFO] [1779128269.905772571] [publish_mocap_odometry_node]: Quaternions: -0.652 0.007 -0.042 -0.757
+Position: -3.400 -1.161 1.085
+[INFO] [1779128269.980535895] [publish_mocap_odometry_node]: Quaternions: -0.655 0.003 -0.026 -0.756
+Position: -3.397 -1.203 1.086
+[INFO] [1779128270.060569874] [publish_mocap_odometry_node]: Quaternions: -0.656 0.009 -0.031 -0.754
+Position: -3.394 -1.247 1.089
+[INFO] [1779128270.141185619] [publish_mocap_odometry_node]: Quaternions: -0.657 0.013 -0.037 -0.753
+Position: -3.393 -1.285 1.089
+[INFO] [1779128270.230504874] [publish_mocap_odometry_node]: Quaternions: -0.660 0.016 -0.025 -0.751
+Position: -3.393 -1.334 1.083
+[INFO] [1779128270.320508739] [publish_mocap_odometry_node]: Quaternions: -0.661 0.016 -0.021 -0.750
+Position: -3.394 -1.388 1.075
+[INFO] [1779128270.410863260] [publish_mocap_odometry_node]: Quaternions: -0.658 0.013 -0.021 -0.753
+Position: -3.397 -1.448 1.068
+[INFO] [1779128270.505504662] [publish_mocap_odometry_node]: Quaternions: -0.660 0.012 -0.018 -0.751
+Position: -3.403 -1.514 1.064
+[INFO] [1779128270.595588579] [publish_mocap_odometry_node]: Quaternions: -0.663 0.013 -0.024 -0.748
+Position: -3.410 -1.581 1.062
+[INFO] [1779128270.695979941] [publish_mocap_odometry_node]: Quaternions: -0.664 0.001 -0.006 -0.748
+Position: -3.420 -1.651 1.064
+[INFO] [1779128270.780639973] [publish_mocap_odometry_node]: Quaternions: -0.672 0.017 -0.005 -0.740
+Position: -3.428 -1.704 1.070
+[INFO] [1779128270.860494008] [publish_mocap_odometry_node]: Quaternions: -0.668 0.015 -0.017 -0.744
+Position: -3.431 -1.757 1.075
+[INFO] [1779128270.935791497] [publish_mocap_odometry_node]: Quaternions: -0.676 0.026 -0.024 -0.737
+Position: -3.435 -1.805 1.073
+[INFO] [1779128271.011374418] [publish_mocap_odometry_node]: Quaternions: -0.674 0.016 -0.017 -0.738
+Position: -3.434 -1.857 1.064
+[INFO] [1779128271.095529163] [publish_mocap_odometry_node]: Quaternions: -0.680 0.010 -0.004 -0.733
+Position: -3.433 -1.918 1.051
+[INFO] [1779128271.170547698] [publish_mocap_odometry_node]: Quaternions: -0.684 0.007 0.005 -0.729
+Position: -3.430 -1.977 1.042
+[INFO] [1779128271.260500216] [publish_mocap_odometry_node]: Quaternions: -0.688 0.016 -0.013 -0.725
+Position: -3.425 -2.051 1.040
+[INFO] [1779128271.352833518] [publish_mocap_odometry_node]: Quaternions: -0.686 0.008 0.001 -0.727
+Position: -3.420 -2.122 1.041
+[INFO] [1779128271.445500948] [publish_mocap_odometry_node]: Quaternions: -0.696 0.027 -0.010 -0.717
+Position: -3.419 -2.187 1.045
+[INFO] [1779128271.535501496] [publish_mocap_odometry_node]: Quaternions: -0.689 0.016 -0.001 -0.725
+Position: -3.419 -2.249 1.049
+[INFO] [1779128271.630524150] [publish_mocap_odometry_node]: Quaternions: -0.695 0.020 0.001 -0.719
+Position: -3.426 -2.306 1.048
+[INFO] [1779128271.725768465] [publish_mocap_odometry_node]: Quaternions: -0.698 0.021 0.001 -0.716
+Position: -3.433 -2.367 1.043
+[INFO] [1779128271.815511029] [publish_mocap_odometry_node]: Quaternions: -0.695 0.019 -0.001 -0.718
+Position: -3.441 -2.432 1.039
+[INFO] [1779128271.910539400] [publish_mocap_odometry_node]: Quaternions: -0.698 0.024 -0.009 -0.716
+Position: -3.454 -2.505 1.036
+[INFO] [1779128272.000550927] [publish_mocap_odometry_node]: Quaternions: -0.699 0.026 -0.005 -0.714
+Position: -3.466 -2.576 1.033
+[INFO] [1779128272.080639439] [publish_mocap_odometry_node]: Quaternions: -0.689 0.011 -0.006 -0.724
+Position: -3.470 -2.631 1.035
+[INFO] [1779128272.175499349] [publish_mocap_odometry_node]: Quaternions: -0.699 0.028 -0.010 -0.715
+Position: -3.482 -2.694 1.041
+[INFO] [1779128272.250501492] [publish_mocap_odometry_node]: Quaternions: -0.700 0.049 -0.032 -0.712
+Position: -3.487 -2.745 1.043
+[INFO] [1779128272.330501080] [publish_mocap_odometry_node]: Quaternions: -0.703 0.017 0.059 -0.709
+Position: -3.493 -2.800 1.042
+[INFO] [1779128282.920500018] [publish_mocap_odometry_node]: Quaternions: -0.057 0.010 0.030 -0.998
+Position: 0.651 -4.655 0.980
+[INFO] [1779128282.995506758] [publish_mocap_odometry_node]: Quaternions: -0.045 0.008 0.026 -0.999
+Position: 0.704 -4.659 0.982
+[INFO] [1779128283.075487224] [publish_mocap_odometry_node]: Quaternions: -0.046 0.012 0.028 -0.998
+Position: 0.762 -4.665 0.989
+[INFO] [1779128283.155490853] [publish_mocap_odometry_node]: Quaternions: -0.046 0.027 0.024 -0.998
+Position: 0.813 -4.670 0.997
+[INFO] [1779128283.245606446] [publish_mocap_odometry_node]: Quaternions: -0.038 0.002 0.032 -0.999
+Position: 0.871 -4.675 1.001
+[INFO] [1779128283.335539639] [publish_mocap_odometry_node]: Quaternions: -0.046 0.012 0.033 -0.998
+Position: 0.928 -4.681 1.002
+[INFO] [1779128283.430642903] [publish_mocap_odometry_node]: Quaternions: -0.036 0.015 0.027 -0.999
+Position: 0.991 -4.683 0.994
+[INFO] [1779128283.525500042] [publish_mocap_odometry_node]: Quaternions: -0.045 0.001 0.034 -0.998
+Position: 1.056 -4.685 0.983
+[INFO] [1779128283.620495526] [publish_mocap_odometry_node]: Quaternions: -0.038 -0.009 0.034 -0.999
+Position: 1.131 -4.683 0.974
+[INFO] [1779128283.710509450] [publish_mocap_odometry_node]: Quaternions: -0.041 -0.014 0.038 -0.998
+Position: 1.199 -4.680 0.974
+[INFO] [1779128283.805521638] [publish_mocap_odometry_node]: Quaternions: -0.044 -0.015 0.042 -0.998
+Position: 1.264 -4.678 0.976
+[INFO] [1779128283.895555329] [publish_mocap_odometry_node]: Quaternions: -0.041 0.002 0.035 -0.999
+Position: 1.326 -4.677 0.979
+[INFO] [1779128283.990505323] [publish_mocap_odometry_node]: Quaternions: -0.038 0.008 0.028 -0.999
+Position: 1.382 -4.681 0.983
+[INFO] [1779128284.080726352] [publish_mocap_odometry_node]: Quaternions: -0.043 0.010 0.030 -0.999
+Position: 1.438 -4.687 0.982
+[INFO] [1779128284.155529236] [publish_mocap_odometry_node]: Quaternions: -0.043 0.005 0.036 -0.998
+Position: 1.488 -4.690 0.975
+[INFO] [1779128284.235525212] [publish_mocap_odometry_node]: Quaternions: -0.033 0.001 0.037 -0.999
+Position: 1.546 -4.693 0.969
+[INFO] [1779128284.310547940] [publish_mocap_odometry_node]: Quaternions: -0.036 0.012 0.034 -0.999
+Position: 1.598 -4.700 0.966
+[INFO] [1779128284.389147776] [publish_mocap_odometry_node]: Quaternions: -0.027 -0.004 0.042 -0.999
+Position: 1.653 -4.705 0.965
+[INFO] [1779128284.465588435] [publish_mocap_odometry_node]: Quaternions: -0.024 0.013 0.035 -0.999
+Position: 1.701 -4.711 0.966
+[INFO] [1779128284.555525114] [publish_mocap_odometry_node]: Quaternions: -0.033 0.022 0.044 -0.998
+Position: 1.756 -4.720 0.968
+[INFO] [1779128294.365511180] [publish_mocap_odometry_node]: Quaternions: 0.625 -0.030 0.016 -0.780
+Position: 3.200 1.154 0.982
+[INFO] [1779128294.455798700] [publish_mocap_odometry_node]: Quaternions: 0.623 0.021 0.028 -0.782
+Position: 3.206 1.224 0.994
+[INFO] [1779128294.530547580] [publish_mocap_odometry_node]: Quaternions: 0.629 0.006 0.016 -0.777
+Position: 3.210 1.284 0.995
+[INFO] [1779128294.605561953] [publish_mocap_odometry_node]: Quaternions: 0.633 -0.004 -0.001 -0.774
+Position: 3.214 1.348 0.988
+[INFO] [1779128294.685502466] [publish_mocap_odometry_node]: Quaternions: 0.632 -0.033 -0.005 -0.774
+Position: 3.219 1.422 0.978
+[INFO] [1779128294.780521500] [publish_mocap_odometry_node]: Quaternions: 0.620 -0.016 0.006 -0.785
+Position: 3.224 1.506 0.972
+[INFO] [1779128294.870810090] [publish_mocap_odometry_node]: Quaternions: 0.611 -0.004 0.029 -0.791
+Position: 3.224 1.592 0.968
+[INFO] [1779128295.345549782] [publish_mocap_odometry_node]: Quaternions: 0.600 0.018 0.026 -0.799
+Position: 3.218 1.884 0.993
+[INFO] [1779128302.620492858] [publish_mocap_odometry_node]: Quaternions: 0.988 0.013 0.048 -0.144
+Position: 0.087 4.439 1.031
+[INFO] [1779128302.620573264] [publish_mocap_odometry_node]: Quaternions: 0.990 0.001 0.041 -0.136
+Position: -0.012 4.446 1.019
+[INFO] [1779128302.635496289] [publish_mocap_odometry_node]: Quaternions: 0.988 0.004 0.054 -0.142
+Position: -0.099 4.457 1.015
+[INFO] [1779128302.731830145] [publish_mocap_odometry_node]: Quaternions: 0.990 0.021 0.061 -0.129
+Position: -0.185 4.465 1.016
+[INFO] [1779128302.820519577] [publish_mocap_odometry_node]: Quaternions: 0.990 -0.002 0.040 -0.132
+Position: -0.264 4.475 1.021
+[INFO] [1779128309.790498655] [publish_mocap_odometry_node]: Quaternions: 0.758 -0.009 0.072 0.648
+Position: -3.472 2.216 1.047
+[INFO] [1779128309.795716231] [publish_mocap_odometry_node]: Quaternions: 0.760 -0.009 0.064 0.647
+Position: -3.471 2.148 1.042
+[INFO] [1779128309.870506937] [publish_mocap_odometry_node]: Quaternions: 0.756 -0.006 0.067 0.651
+Position: -3.469 2.081 1.034
+[INFO] [1779128309.950505414] [publish_mocap_odometry_node]: Quaternions: 0.760 -0.008 0.062 0.646
+Position: -3.467 2.009 1.023
+[INFO] [1779128310.045538670] [publish_mocap_odometry_node]: Quaternions: 0.766 -0.011 0.060 0.640
+Position: -3.461 1.910 1.019
+[INFO] [1779128310.135611891] [publish_mocap_odometry_node]: Quaternions: 0.765 0.007 0.084 0.639
+Position: -3.449 1.825 1.022
+[INFO] [1779128310.231949506] [publish_mocap_odometry_node]: Quaternions: 0.768 0.008 0.064 0.637
+Position: -3.444 1.747 1.028
+[INFO] [1779128310.320533925] [publish_mocap_odometry_node]: Quaternions: 0.771 0.006 0.070 0.633
+Position: -3.441 1.676 1.035
+[INFO] [1779128310.410515167] [publish_mocap_odometry_node]: Quaternions: 0.775 0.002 0.080 0.626
+Position: -3.439 1.605 1.030
+[INFO] [1779128310.505491129] [publish_mocap_odometry_node]: Quaternions: 0.777 0.004 0.047 0.627
+Position: -3.436 1.525 1.014
+[INFO] [1779128310.596480532] [publish_mocap_odometry_node]: Quaternions: 0.776 0.007 0.068 0.626
+Position: -3.433 1.442 1.004
+[INFO] [1779128310.690590213] [publish_mocap_odometry_node]: Quaternions: 0.772 0.004 0.062 0.632
+Position: -3.430 1.352 0.998
+[INFO] [1779128310.771127313] [publish_mocap_odometry_node]: Quaternions: 0.765 0.015 0.025 0.644
+Position: -3.427 1.273 0.996
+[INFO] [1779128310.845499801] [publish_mocap_odometry_node]: Quaternions: 0.765 -0.002 0.029 0.644
+Position: -3.424 1.207 1.003
+[INFO] [1779128310.920493940] [publish_mocap_odometry_node]: Quaternions: 0.770 -0.011 0.043 0.637
+Position: -3.421 1.146 1.009
+[INFO] [1779128310.995515295] [publish_mocap_odometry_node]: Quaternions: 0.767 -0.011 0.040 0.641
+Position: -3.419 1.082 1.009
+[INFO] [1779128311.075600299] [publish_mocap_odometry_node]: Quaternions: 0.769 -0.015 0.047 0.637
+Position: -3.420 1.018 1.007
+[INFO] [1779128311.165510790] [publish_mocap_odometry_node]: Quaternions: 0.768 -0.015 0.059 0.638
+Position: -3.424 0.936 1.000
+[INFO] [1779128311.260549752] [publish_mocap_odometry_node]: Quaternions: 0.772 -0.015 0.048 0.634
+Position: -3.428 0.840 0.993
+[INFO] [1779128311.355495882] [publish_mocap_odometry_node]: Quaternions: 0.785 -0.029 0.074 0.614
+Position: -3.432 0.753 0.994
+[INFO] [1779128311.446105639] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.021 0.057 0.623
+Position: -3.435 0.667 1.000
+[INFO] [1779128311.535501657] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.022 0.065 0.620
+Position: -3.438 0.593 1.010
+[INFO] [1779128311.631068370] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.024 0.073 0.621
+Position: -3.441 0.526 1.018
+[INFO] [1779128311.720499915] [publish_mocap_odometry_node]: Quaternions: 0.779 -0.026 0.066 0.623
+Position: -3.443 0.465 1.017
+[INFO] [1779128311.815505388] [publish_mocap_odometry_node]: Quaternions: 0.772 -0.019 0.047 0.633
+Position: -3.444 0.408 1.013
+[INFO] [1779128311.895509962] [publish_mocap_odometry_node]: Quaternions: 0.769 -0.024 0.063 0.636
+Position: -3.446 0.362 1.015
+[INFO] [1779128311.970932348] [publish_mocap_odometry_node]: Quaternions: 0.766 -0.029 0.065 0.639
+Position: -3.448 0.323 1.015
+[INFO] [1779128312.045484380] [publish_mocap_odometry_node]: Quaternions: 0.754 -0.010 0.070 0.653
+Position: -3.448 0.285 1.013
+[INFO] [1779128312.120554399] [publish_mocap_odometry_node]: Quaternions: 0.747 -0.005 0.057 0.662
+Position: -3.447 0.250 1.013
+[INFO] [1779128312.200497191] [publish_mocap_odometry_node]: Quaternions: 0.739 -0.006 0.041 0.672
+Position: -3.449 0.217 1.015
+[INFO] [1779128312.280571670] [publish_mocap_odometry_node]: Quaternions: 0.744 -0.020 0.063 0.665
+Position: -3.449 0.192 1.019
+[INFO] [1779128312.370707402] [publish_mocap_odometry_node]: Quaternions: 0.742 -0.013 0.051 0.669
+Position: -3.445 0.169 1.017
+[INFO] [1779128312.465501280] [publish_mocap_odometry_node]: Quaternions: 0.733 -0.013 0.053 0.678
+Position: -3.429 0.146 1.012
+[INFO] [1779128312.555498243] [publish_mocap_odometry_node]: Quaternions: 0.719 -0.005 0.054 0.693
+Position: -3.401 0.126 1.006
+[INFO] [1779128312.645550998] [publish_mocap_odometry_node]: Quaternions: 0.705 -0.002 0.045 0.708
+Position: -3.360 0.111 1.000
+[INFO] [1779128312.740498878] [publish_mocap_odometry_node]: Quaternions: 0.683 -0.007 0.055 0.728
+Position: -3.300 0.098 0.994
+[INFO] [1779128312.830509010] [publish_mocap_odometry_node]: Quaternions: 0.658 -0.009 0.051 0.751
+Position: -3.229 0.086 0.985
+[INFO] [1779128312.910519737] [publish_mocap_odometry_node]: Quaternions: 0.637 -0.007 0.041 0.770
+Position: -3.165 0.073 0.979
+[INFO] [1779128312.985514798] [publish_mocap_odometry_node]: Quaternions: 0.605 -0.006 0.041 0.795
+Position: -3.090 0.056 0.979
+[INFO] [1779128313.065718056] [publish_mocap_odometry_node]: Quaternions: 0.584 -0.016 0.043 0.810
+Position: -3.026 0.043 0.982
+[INFO] [1779128313.155566799] [publish_mocap_odometry_node]: Quaternions: 0.565 -0.021 0.034 0.824
+Position: -2.957 0.030 0.987
+[INFO] [1779128313.230497699] [publish_mocap_odometry_node]: Quaternions: 0.557 -0.033 0.027 0.829
+Position: -2.905 0.022 0.991
+[INFO] [1779128313.310540202] [publish_mocap_odometry_node]: Quaternions: 0.534 -0.029 0.027 0.845
+Position: -2.853 0.017 0.994
+[INFO] [1779128313.400624251] [publish_mocap_odometry_node]: Quaternions: 0.510 -0.033 0.027 0.859
+Position: -2.787 0.012 0.997
+[INFO] [1779128313.495525295] [publish_mocap_odometry_node]: Quaternions: 0.483 -0.041 0.034 0.874
+Position: -2.725 0.009 0.997
+[INFO] [1779128313.585525055] [publish_mocap_odometry_node]: Quaternions: 0.457 -0.037 0.034 0.888
+Position: -2.659 0.006 0.992
+[INFO] [1779128313.680677637] [publish_mocap_odometry_node]: Quaternions: 0.446 -0.038 0.027 0.894
+Position: -2.593 0.002 0.987
+[INFO] [1779128313.770575159] [publish_mocap_odometry_node]: Quaternions: 0.423 -0.036 0.035 0.905
+Position: -2.520 0.001 0.985
+[INFO] [1779128313.865536759] [publish_mocap_odometry_node]: Quaternions: 0.416 -0.036 0.028 0.908
+Position: -2.452 0.002 0.986
+[INFO] [1779128313.956281920] [publish_mocap_odometry_node]: Quaternions: 0.403 -0.036 0.023 0.914
+Position: -2.382 0.009 0.994
+[INFO] [1779128314.055525234] [publish_mocap_odometry_node]: Quaternions: 0.392 -0.045 0.047 0.917
+Position: -2.312 0.023 1.002
+[INFO] [1779128314.145497775] [publish_mocap_odometry_node]: Quaternions: 0.400 -0.047 0.040 0.915
+Position: -2.249 0.030 0.996
+[INFO] [1779128314.235521072] [publish_mocap_odometry_node]: Quaternions: 0.411 -0.023 0.024 0.911
+Position: -2.183 0.033 0.981
+[INFO] [1779128314.330738878] [publish_mocap_odometry_node]: Quaternions: 0.432 -0.020 0.017 0.902
+Position: -2.113 0.037 0.968
+[INFO] [1779128314.400503231] [publish_mocap_odometry_node]: Quaternions: 0.443 -0.021 0.024 0.896
+Position: -2.054 0.043 0.962
+[INFO] [1779128314.480496457] [publish_mocap_odometry_node]: Quaternions: 0.459 -0.024 0.036 0.887
+Position: -1.996 0.054 0.962
+[INFO] [1779128314.560571540] [publish_mocap_odometry_node]: Quaternions: 0.484 -0.022 0.030 0.874
+Position: -1.937 0.068 0.962
+[INFO] [1779128314.655567077] [publish_mocap_odometry_node]: Quaternions: 0.510 -0.017 0.004 0.860
+Position: -1.869 0.081 0.960
+[INFO] [1779128314.745508419] [publish_mocap_odometry_node]: Quaternions: 0.515 -0.001 0.001 0.857
+Position: -1.802 0.088 0.964
+[INFO] [1779128314.841125160] [publish_mocap_odometry_node]: Quaternions: 0.522 -0.026 0.024 0.852
+Position: -1.736 0.091 0.968
+[INFO] [1779128314.930524709] [publish_mocap_odometry_node]: Quaternions: 0.535 -0.035 0.027 0.844
+Position: -1.667 0.086 0.963
+[INFO] [1779128315.021218101] [publish_mocap_odometry_node]: Quaternions: 0.536 -0.020 0.009 0.844
+Position: -1.595 0.078 0.953
+[INFO] [1779128315.115496763] [publish_mocap_odometry_node]: Quaternions: 0.556 -0.027 0.008 0.831
+Position: -1.526 0.076 0.949
+[INFO] [1779128315.215607743] [publish_mocap_odometry_node]: Quaternions: 0.562 -0.013 -0.011 0.827
+Position: -1.460 0.076 0.948
+[INFO] [1779128315.285650470] [publish_mocap_odometry_node]: Quaternions: 0.564 -0.008 -0.025 0.826
+Position: -1.400 0.079 0.951
+[INFO] [1779128315.380509212] [publish_mocap_odometry_node]: Quaternions: 0.567 -0.015 -0.009 0.823
+Position: -1.336 0.083 0.958
+[INFO] [1779128315.470505134] [publish_mocap_odometry_node]: Quaternions: 0.568 -0.020 0.003 0.823
+Position: -1.269 0.082 0.956
+[INFO] [1779128315.545603316] [publish_mocap_odometry_node]: Quaternions: 0.568 -0.012 0.002 0.823
+Position: -1.212 0.082 0.947
+[INFO] [1779128315.625531289] [publish_mocap_odometry_node]: Quaternions: 0.575 -0.009 0.009 0.818
+Position: -1.155 0.081 0.935
+[INFO] [1779128315.700579445] [publish_mocap_odometry_node]: Quaternions: 0.584 0.001 -0.006 0.812
+Position: -1.094 0.080 0.921
+[INFO] [1779128315.780503923] [publish_mocap_odometry_node]: Quaternions: 0.600 -0.002 -0.001 0.800
+Position: -1.024 0.080 0.913
+[INFO] [1779128315.855623466] [publish_mocap_odometry_node]: Quaternions: 0.609 0.000 0.007 0.793
+Position: -0.961 0.083 0.909
+[INFO] [1779128315.945485217] [publish_mocap_odometry_node]: Quaternions: 0.632 0.009 -0.013 0.775
+Position: -0.888 0.086 0.906
+[INFO] [1779128316.040565117] [publish_mocap_odometry_node]: Quaternions: 0.630 0.016 -0.024 0.776
+Position: -0.811 0.086 0.904
+[INFO] [1779128316.135497782] [publish_mocap_odometry_node]: Quaternions: 0.628 0.018 -0.023 0.778
+Position: -0.741 0.080 0.907
+[INFO] [1779128316.227806939] [publish_mocap_odometry_node]: Quaternions: 0.635 0.001 0.001 0.772
+Position: -0.675 0.071 0.906
+[INFO] [1779128316.320520622] [publish_mocap_odometry_node]: Quaternions: 0.633 0.014 -0.012 0.774
+Position: -0.604 0.060 0.893
+[INFO] [1779128316.410505506] [publish_mocap_odometry_node]: Quaternions: 0.645 0.018 -0.027 0.763
+Position: -0.546 0.051 0.879
+[INFO] [1779128316.500579859] [publish_mocap_odometry_node]: Quaternions: 0.656 0.019 -0.030 0.754
+Position: -0.487 0.042 0.872
+[INFO] [1779128316.581239896] [publish_mocap_odometry_node]: Quaternions: 0.651 0.024 -0.024 0.758
+Position: -0.439 0.040 0.872
+[INFO] [1779128316.655502062] [publish_mocap_odometry_node]: Quaternions: 0.679 0.008 -0.056 0.732
+Position: -0.399 0.040 0.875
+[INFO] [1779128316.735510865] [publish_mocap_odometry_node]: Quaternions: 0.663 0.015 -0.026 0.748
+Position: -0.349 0.042 0.882
+[INFO] [1779128316.810510171] [publish_mocap_odometry_node]: Quaternions: 0.664 0.025 -0.025 0.747
+Position: -0.313 0.040 0.878
+[INFO] [1779128316.890515456] [publish_mocap_odometry_node]: Quaternions: 0.678 0.033 -0.063 0.732
+Position: -0.282 0.032 0.867
+[INFO] [1779128316.980513921] [publish_mocap_odometry_node]: Quaternions: 0.689 0.037 -0.040 0.723
+Position: -0.240 0.023 0.856
+[INFO] [1779128317.071937142] [publish_mocap_odometry_node]: Quaternions: 0.697 0.041 -0.033 0.715
+Position: -0.201 0.017 0.845
+[INFO] [1779128317.170548530] [publish_mocap_odometry_node]: Quaternions: 0.715 0.050 -0.049 0.695
+Position: -0.171 0.022 0.837
+[INFO] [1779128317.255786309] [publish_mocap_odometry_node]: Quaternions: 0.737 0.041 -0.050 0.672
+Position: -0.152 0.032 0.832
+[INFO] [1779128317.355504887] [publish_mocap_odometry_node]: Quaternions: 0.739 0.049 -0.071 0.668
+Position: -0.134 0.040 0.826
+[INFO] [1779128317.445500482] [publish_mocap_odometry_node]: Quaternions: 0.752 0.043 -0.056 0.656
+Position: -0.124 0.048 0.825
+[INFO] [1779128317.537833325] [publish_mocap_odometry_node]: Quaternions: 0.753 0.047 -0.048 0.654
+Position: -0.117 0.055 0.821
+[INFO] [1779128317.630503196] [publish_mocap_odometry_node]: Quaternions: 0.754 0.052 -0.057 0.652
+Position: -0.111 0.064 0.810
+[INFO] [1779128317.724797460] [publish_mocap_odometry_node]: Quaternions: 0.746 0.055 -0.059 0.661
+Position: -0.103 0.072 0.796
+[INFO] [1779128317.815680801] [publish_mocap_odometry_node]: Quaternions: 0.759 0.047 -0.061 0.647
+Position: -0.097 0.082 0.781
+[INFO] [1779128317.890521365] [publish_mocap_odometry_node]: Quaternions: 0.765 0.042 -0.072 0.639
+Position: -0.090 0.090 0.765
+[INFO] [1779128317.980546349] [publish_mocap_odometry_node]: Quaternions: 0.764 0.041 -0.079 0.639
+Position: -0.083 0.093 0.749
+[INFO] [1779128318.047818670] [publish_mocap_odometry_node]: Quaternions: 0.764 0.044 -0.073 0.639
+Position: -0.078 0.094 0.732
+[INFO] [1779128318.120532486] [publish_mocap_odometry_node]: Quaternions: 0.764 0.034 -0.035 0.643
+Position: -0.073 0.088 0.706
+[INFO] [1779128318.200507409] [publish_mocap_odometry_node]: Quaternions: 0.764 0.027 -0.025 0.644
+Position: -0.070 0.076 0.665
+[INFO] [1779128318.295504775] [publish_mocap_odometry_node]: Quaternions: 0.762 0.024 -0.016 0.648
+Position: -0.064 0.055 0.587
+[INFO] [1779128318.387028835] [publish_mocap_odometry_node]: Quaternions: 0.764 0.029 -0.024 0.644
+Position: -0.053 0.037 0.492
+[INFO] [1779128318.480499345] [publish_mocap_odometry_node]: Quaternions: 0.755 0.052 -0.046 0.652
+Position: -0.038 0.016 0.392
+[INFO] [1779128318.570503786] [publish_mocap_odometry_node]: Quaternions: 0.778 0.043 -0.031 0.627
+Position: -0.025 0.002 0.300
+[INFO] [1779128318.662653842] [publish_mocap_odometry_node]: Quaternions: 0.774 0.045 -0.040 0.630
+Position: -0.006 -0.013 0.212
+[INFO] [1779128318.755503462] [publish_mocap_odometry_node]: Quaternions: 0.773 0.045 -0.077 0.629
+Position: 0.007 -0.020 0.136
+[INFO] [1779128318.845509151] [publish_mocap_odometry_node]: Quaternions: 0.779 0.037 -0.078 0.621
+Position: 0.009 -0.021 0.089
+[INFO] [1779128318.925498377] [publish_mocap_odometry_node]: Quaternions: 0.776 0.030 -0.054 0.628
+Position: 0.009 -0.023 0.072
+[INFO] [1779128319.000493657] [publish_mocap_odometry_node]: Quaternions: 0.775 0.037 -0.049 0.629
+Position: 0.005 -0.022 0.061
+[INFO] [1779128319.080518113] [publish_mocap_odometry_node]: Quaternions: 0.781 0.039 -0.058 0.621
+Position: -0.000 -0.017 0.053
+[INFO] [1779128319.155509242] [publish_mocap_odometry_node]: Quaternions: 0.779 0.039 -0.066 0.622
+Position: -0.003 -0.010 0.048
+[INFO] [1779128319.230544094] [publish_mocap_odometry_node]: Quaternions: 0.777 0.035 -0.054 0.626
+Position: -0.001 -0.002 0.046
+[INFO] [1779128319.310584359] [publish_mocap_odometry_node]: Quaternions: 0.776 0.024 -0.038 0.629
+Position: 0.003 0.004 0.044
+[INFO] [1779128319.400509131] [publish_mocap_odometry_node]: Quaternions: 0.777 0.011 -0.028 0.628
+Position: 0.008 0.006 0.042
+[INFO] [1779128319.495504180] [publish_mocap_odometry_node]: Quaternions: 0.782 -0.023 -0.012 0.623
+Position: 0.009 0.008 0.039
+[INFO] [1779128319.585580202] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.011 0.003 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128319.680519876] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.004 0.008 0.625
+Position: 0.011 0.008 0.037
+[INFO] [1779128319.770526919] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.011 0.006 0.624
+Position: 0.011 0.008 0.037
+[INFO] [1779128319.865500961] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.013 0.006 0.624
+Position: 0.010 0.009 0.037
+[INFO] [1779128319.955510578] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.002 0.625
+Position: 0.010 0.009 0.036
+[INFO] [1779128320.030607288] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.015 0.005 0.625
+Position: 0.011 0.009 0.036
+[INFO] [1779128320.110634516] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.016 0.008 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128320.190503868] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.013 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128320.265576981] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.626
+Position: 0.010 0.008 0.037
+[INFO] [1779128320.340521043] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128320.420510327] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.015 0.008 0.625
+Position: 0.010 0.008 0.037
+[INFO] [1779128320.510521987] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.015 0.007 0.625
+Position: 0.010 0.008 0.037
+[INFO] [1779128320.600634992] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128320.700654511] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.016 0.009 0.625
+Position: 0.010 0.008 0.036
+[INFO] [1779128320.790503159] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.011 0.009 0.037
+[INFO] [1779128320.880508266] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.015 0.008 0.625
+Position: 0.011 0.009 0.037
+[INFO] [1779128320.971811144] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.007 0.625
+Position: 0.011 0.009 0.037
+[INFO] [1779128321.065496446] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.015 0.008 0.625
+Position: 0.011 0.009 0.037
+[INFO] [1779128321.140516528] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.006 0.625
+Position: 0.011 0.009 0.037
+[INFO] [1779128321.225495612] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.006 0.625
+Position: 0.011 0.009 0.037
+[INFO] [1779128321.315517543] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.015 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128321.385514592] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128321.465513380] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128321.560547108] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128321.650540042] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128321.746044159] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128321.840507100] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128321.930596047] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.025919804] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.110565485] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.004 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.185539473] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.267001606] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.345609722] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.435583507] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.515516463] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.591807975] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.671800901] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.765597628] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.855558080] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128322.945520282] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.035515105] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.130497071] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.220570633] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.300489072] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.390507682] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.470507550] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.565561419] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.640514321] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.015 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.715522458] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.815824349] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.900496023] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128323.995773101] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.090777910] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.180628508] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.270611430] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.365806172] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.460497611] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.550514110] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.645511542] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.036
+[INFO] [1779128324.720550452] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.815509916] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.006 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128324.905567657] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.006 0.625
+Position: 0.010 0.009 0.036
+[INFO] [1779128324.980515129] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128325.076605269] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128325.165581317] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128325.260510285] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.011 0.009 0.037
+[INFO] [1779128325.352199581] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128325.447224686] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128325.535500079] [publish_mocap_odometry_node]: Quaternions: 0.780 -0.014 0.007 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128325.630488364] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+[INFO] [1779128325.725493515] [publish_mocap_odometry_node]: Quaternions: 0.781 -0.014 0.005 0.625
+Position: 0.010 0.009 0.037
+^C[INFO] [1779128325.764719582] [rclcpp]: signal_handler(SIGINT/SIGTERM)
+vrpn_Connection::~vrpn_Connection: Connection was deleted while 2 references still remain.
+[ros2run]: Segmentation fault
