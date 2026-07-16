@@ -26,6 +26,35 @@ Flight CSVs and visualizations are local-only artifacts under `flight_logs/`.
 The script launches `plot_crazyflie_3d_track.py` for a live/final 3D view when
 matplotlib is available.
 
+## 2026-07-15 Height Coverage Probe
+
+The temporary `mocap_height_mapper.py` experiment was removed after collecting
+the useful vertical coverage data.
+
+Best source log:
+
+- `flight_logs/mocap-height-map-20260715-155351.csv`
+
+Findings:
+
+- Highest fresh center-climb sample was about `3.996 m` above recorded start
+  height, with `mocap_z ~= 4.035 m`.
+- Horizontal drift at that max-height sample was only about `0.06 m`.
+- The first stale interval began near `3.991 m` above start
+  (`mocap_z ~= 4.030 m`) and lasted about `1.06 s`.
+- Additional stale/reacquire cycles appeared near the same `~4.0 m` region,
+  including one stale interval of about `3.51 s`.
+- Earlier probe data stayed fresh through about `1.76 m` above start.
+
+Conclusion:
+
+- The normal 3 ft helper target (`0.9144 m`) is comfortably within measured
+  center-cage mocap coverage.
+- Around `4.0 m` above the start/floor reference is an approximate upper
+  coverage edge near center, not a guaranteed hard limit.
+- Stale-mocap guards should remain enabled because VRPN may hold the last pose
+  while `mocap_age_s` grows.
+
 ## Commit Review
 
 Reviewed reachable commits by author `alwnraj`.

@@ -120,6 +120,25 @@ experiment setting, not a claim that high-altitude flight is intrinsically safe.
 pausing the figure-8 timeline. A prolonged stale interval levels the commands
 and eventually initiates the configured safety descent.
 
+## Height Coverage Finding
+
+The retired height-probe experiment
+`flight_logs/mocap-height-map-20260715-155351.csv` is the current best evidence
+for vertical mocap coverage near the cage center. It reached a fresh mocap
+height of about `3.996 m` above the recorded start point (`mocap_z ~= 4.035 m`)
+with only about `0.06 m` horizontal drift.
+
+Coverage near that height should be treated as intermittent, not guaranteed.
+The first stale interval began around `3.991 m` above start
+(`mocap_z ~= 4.030 m`), and several stale/reacquire cycles happened near the
+same ceiling region. Earlier height-probe logs stayed fresh through about
+`1.76 m` above start, so the normal 3 ft figure-8 target (`0.9144 m`) is well
+inside the proven coverage volume.
+
+The experimental `mocap_height_mapper.py` script has been removed. Keep using
+the manual path scripts plus their CSV logs for flight work; keep stale-mocap
+guards enabled even below the measured upper coverage edge.
+
 ## Repository Notes
 
 `AIMSLAB_AUTONOMY_RUNBOOK.md` and `HANDOFF.md` preserve earlier high-level

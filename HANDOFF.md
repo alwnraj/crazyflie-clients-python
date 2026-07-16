@@ -30,6 +30,25 @@ The script writes local-only CSVs and 3D path images to `flight_logs/`; those
 artifacts are deliberately ignored by Git. For current instructions and active
 configuration, read `MOCAP_MANUAL_FIGURE8.md` before the historical notes below.
 
+## 2026-07-15 Height Coverage Finding
+
+The experimental height mapper has been retired and `mocap_height_mapper.py`
+has been removed. Its useful result is preserved here:
+
+- Best source log: `flight_logs/mocap-height-map-20260715-155351.csv`.
+- Maximum fresh center-climb sample: `3.996 m` above recorded start height,
+  with `mocap_z ~= 4.035 m` and about `0.06 m` horizontal drift.
+- First stale sample in that run began around `3.991 m` above start
+  (`mocap_z ~= 4.030 m`), followed by stale/reacquire cycles near the same
+  upper region.
+- Earlier height-probe logs stayed fresh through about `1.76 m` above start,
+  which leaves the normal 3 ft helper target (`0.9144 m`) comfortably inside
+  measured mocap coverage.
+
+Treat `~4.0 m` above the start/floor reference as an approximate center-cage
+upper coverage edge, not a hard ceiling. Stale-pose checks remain mandatory
+because VRPN can keep returning the last pose while `mocap_age_s` grows.
+
 ## Historical Status (2026-07-08)
 
 Do not run a powered HLC hover yet. `mocap_autonomy_ladder.py` now requires an

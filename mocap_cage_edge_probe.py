@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Manual-thrust Crazyflie flight with mocap-assisted roll, pitch, yaw, and figure-8.
+Manual-thrust Crazyflie flight with a mocap-assisted cage-edge probe.
 
 This is intentionally a script you tune by editing the constants below. The
-pilot owns takeoff and landing thrust. During the figure-8, the script can
-add a small mocap-based thrust correction to keep the path flat. The script
+pilot owns takeoff and landing thrust. During the edge probe, the script can
+add a small mocap-based thrust correction to keep the flight height steady. The script
 commands:
 
 - roll/pitch to hold or move the horizontal mocap X/Y target
 - yawrate to hold the starting heading
-- optional figure-8-only altitude hold correction on top of pilot thrust
+- an optional 3-ft altitude hold while it surveys the four horizontal directions
 - optional keyboard attitude trims on top of the mocap assist
 - stale-mocap forced descent/abort behavior, plus safety cuts if the drone
   leaves the tight flight box, climbs too fast, or height gets too high
@@ -21,9 +21,9 @@ Recommended first flights:
 3. Press T to climb/hold near 3 ft, then wait for the READY indication.
 4. Use A/D, W/S, and J/L only as small trims while learning the response.
 5. Do not press F until it can hold near the start X/Y for several seconds.
-6. Press F to start the figure-8. Press F again to return to the figure-8
-   start point and land.
-7. During 3ft hold or figure-8, Up/Down nudge the height target.
+6. Press F to probe forward, backward, left, and right from the start point.
+   Press F again to stop, return to the start point, and land.
+7. During 3ft hold or the probe, Up/Down nudge the height target.
 8. Use PgDn for normal slow descent. Space/Q are emergency cuts.
 """
 
@@ -57,8 +57,9 @@ URI = "radio://0/80/2M"
 MOCAP_HOST = "192.168.1.42:3883"
 RIGID_BODY_NAME = "crazyflie_21"
 
-# Cage corners from Motive/VRPN raw coordinates. The flight controller below
-# operates in the transformed local frame, so these are transformed before use.
+# The edge probe intentionally does not enforce the old measured cage polygon:
+# its job is to find the usable tracking boundary. The absolute probe distance
+# below remains a final backstop if tracking never drops out.
 RAW_CAGE_CORNER_POINTS = [
     (-1.027, 1.015, 0.046),   # bottom right
     (-1.020, -0.999, 0.046),  # top right
@@ -68,12 +69,12 @@ RAW_CAGE_CORNER_POINTS = [
 CAGE_WALL_MARGIN_M = 0.12
 FIGURE8_TRACKING_RESERVE_M = 0.18
 CAGE_LIMIT_EXPANSION_M = 2.00
-ENFORCE_CAGE_BOUNDS = True
+ENFORCE_CAGE_BOUNDS = False
 
 # Keep this smaller than the full cage until mocap coverage is reliable.
 # These limits are relative to the takeoff/start position.
-MAX_XY_DRIFT_M = 5.50
-MAX_GROUND_XY_DRIFT_M = 5.50
+MAX_XY_DRIFT_M = 6.50
+MAX_GROUND_XY_DRIFT_M = 6.50
 MAX_TARGET_ERROR_M = 0.55
 FIGURE8_TARGET_ERROR_LIMIT_M = 1.35
 FIGURE8_STARTUP_TARGET_ERROR_LIMIT_M = 1.75
@@ -91,13 +92,16 @@ MAX_CLIMB_RATE_M_S = 0.60
 SAFETY_THRUST_RAW = 35000
 ESTIMATOR_HEIGHT_SAFETY_ONLY_WHEN_MOCAP_STALE = True
 MOCAP_STALE_TIMEOUT_S = 0.30
-MOCAP_STALE_GRACE_S = 4.00
-MOCAP_STALE_COAST_S = 1.20
+MOCAP_STALE_GRACE_S = 3.00
+MOCAP_STALE_COAST_S = 0.00
 MOCAP_STALE_COAST_MAX_ANGLE_DEG = 2.0
 MOCAP_STALE_COAST_MAX_YAWRATE_DEG_S = 20.0
 MOCAP_STALE_RESUME_FIGURE8_S = 3.50
 SHUTDOWN_ON_STALE_MOCAP = True
-MOCAP_STALE_FORCE_DESCENT = True
+# The probe must wait through its 3-second stale confirmation window. It
+# levels immediately on the first stale frame and descends only if tracking
+# has not returned by MOCAP_STALE_GRACE_S.
+MOCAP_STALE_FORCE_DESCENT = False
 MOCAP_RELOCK_AFTER_STALE_S = 0.45
 STALE_LOG_PERIOD_S = 0.10
 ESTIMATOR_STALE_TIMEOUT_S = 0.50
@@ -125,7 +129,7 @@ CONTROLLED_SAFETY_ALTITUDE_KD_RAW_PER_M_S = 4200.0
 CONTROLLED_SAFETY_ALTITUDE_CORRECTION_LIMIT_RAW = 1800.0
 CONTROLLED_SAFETY_ALTITUDE_CORRECTION_SLEW_RAW_PER_S = 2400.0
 
-# Pre-figure-8 height helper. Press T after takeoff to climb/hold about 3 ft
+# Pre-probe height helper. Press T after takeoff to climb/hold about 3 ft
 # before pressing F. It uses mocap height and is disabled during stale mocap.
 PREFIGURE8_HEIGHT_HOLD_ENABLED = True
 PREFIGURE8_HEIGHT_TARGET_M = 0.9144
@@ -206,9 +210,9 @@ FIGURE8_MAX_START_ERROR_M = 0.18
 FIGURE8_MAX_START_HORIZONTAL_SPEED_M_S = 0.20
 FIGURE8_MAX_START_VERTICAL_SPEED_M_S = 0.08
 
-# Figure-8 altitude hold. This only runs while figure-8 mode is active and
-# mocap is fresh. Up/Down change the target height during figure-8; outside
-# figure-8 they still change raw thrust.
+# Probe altitude hold. This only runs while the edge probe is active and mocap
+# is fresh. Up/Down change the target height during the probe; outside it they
+# still change raw thrust.
 FIGURE8_ALTITUDE_HOLD_ENABLED = True
 FIGURE8_ALTITUDE_STEP_M = 0.03
 FIGURE8_ALTITUDE_BIG_STEP_M = 0.08
@@ -220,6 +224,22 @@ FIGURE8_ALTITUDE_KD_RAW_PER_M_S = 3500.0
 FIGURE8_ALTITUDE_INTEGRAL_MAX_ERROR_S = 0.60
 FIGURE8_ALTITUDE_CORRECTION_LIMIT_RAW = 1800.0
 FIGURE8_ALTITUDE_CORRECTION_SLEW_RAW_PER_S = 3000.0
+
+# Cage-edge probe. Directions are relative to the body heading captured when
+# F is pressed: forward, backward, left, right. The target advances slowly
+# and is never more than PROBE_TARGET_LOOKAHEAD_M ahead of the tracked drone.
+PROBE_TARGET_SPEED_M_S = 0.25
+PROBE_TARGET_LOOKAHEAD_M = 0.30
+# The operator reported about 2m clear in every direction. Keep 0.2m inside
+# that known-clear region rather than repeating the first run's 4.9m leg.
+PROBE_ABSOLUTE_MAX_DISTANCE_M = 1.80
+PROBE_CENTER_TOLERANCE_M = 0.15
+PROBE_CENTER_SPEED_M_S = 0.18
+PROBE_MAX_ANGLE_DEG = 12.0
+PROBE_TARGET_ERROR_LIMIT_M = 0.65
+PROBE_TARGET_ERROR_GRACE_S = 0.70
+PROBE_STALE_BORDER_S = 3.00
+PROBE_DIRECTION_NAMES = ("forward", "backward", "left", "right")
 
 # Misc.
 OUTPUT_DIR = "flight_logs"
@@ -267,20 +287,28 @@ class MocapState:
     def __init__(self):
         self._lock = Lock()
         self.position = None
+        self.raw_position = None
         self.quat = None
         self.last_update = 0.0
         self.frame_count = 0
 
-    def update(self, position, quat):
+    def update(self, position, raw_position, quat):
         with self._lock:
             self.position = tuple(position)
+            self.raw_position = tuple(raw_position)
             self.quat = quat
             self.last_update = time.time()
             self.frame_count += 1
 
     def snapshot(self):
         with self._lock:
-            return self.position, self.quat, self.last_update, self.frame_count
+            return (
+                self.position,
+                self.raw_position,
+                self.quat,
+                self.last_update,
+                self.frame_count,
+            )
 
 
 class Telemetry:
@@ -341,8 +369,9 @@ class MocapReader(Thread):
                         quat = normalized_quat(obj.rotation)
                         if quat is None:
                             continue
-                        pos = raw_position_to_local(obj.position)
-                        self.state.update(pos, quat)
+                        raw_position = tuple(float(value) for value in obj.position)
+                        pos = raw_position_to_local(raw_position)
+                        self.state.update(pos, raw_position, quat)
                         self.error = None
             except Exception as exc:
                 self.error = exc
@@ -388,6 +417,19 @@ class CsvLogger:
         "target_error_y_m",
         "target_error_m",
         "target_error_exceeded_s",
+        "probe_active",
+        "probe_returning",
+        "probe_leg_index",
+        "probe_direction",
+        "probe_heading_deg",
+        "probe_target_distance_m",
+        "probe_projected_distance_m",
+        "probe_confirmed_border",
+        "probe_border_distance_m",
+        "probe_last_fresh_x_m",
+        "probe_last_fresh_y_m",
+        "probe_last_fresh_z_m",
+        "probe_last_fresh_elapsed_s",
         "figure8_active",
         "return_land_active",
         "return_home_error_m",
@@ -420,6 +462,9 @@ class CsvLogger:
         "mocap_x",
         "mocap_y",
         "mocap_z",
+        "raw_mocap_x",
+        "raw_mocap_y",
+        "raw_mocap_z",
         "mocap_qx",
         "mocap_qy",
         "mocap_qz",
@@ -457,7 +502,7 @@ class CsvLogger:
 
     def __init__(self):
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        self.output_path = Path(OUTPUT_DIR) / f"mocap-assisted-figure8-{timestamp}.csv"
+        self.output_path = Path(OUTPUT_DIR) / f"mocap-cage-edge-probe-{timestamp}.csv"
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         self._file = self.output_path.open("w", newline="")
         self._writer = csv.DictWriter(self._file, fieldnames=self.FIELDNAMES)
@@ -756,7 +801,7 @@ def rotate_world_to_body(world_x, world_y, yaw_rad):
 
 
 def pose_age(mocap_state):
-    _, _, last_update, _ = mocap_state.snapshot()
+    _, _, _, last_update, _ = mocap_state.snapshot()
     if last_update == 0.0:
         return float("inf")
     return time.time() - last_update
@@ -766,7 +811,7 @@ def wait_for_fresh_pose(mocap_state):
     deadline = time.time() + MOCAP_TIMEOUT_S
     while time.time() < deadline:
         if pose_age(mocap_state) <= MOCAP_STALE_TIMEOUT_S:
-            position, quat, _, frames = mocap_state.snapshot()
+            position, _, quat, _, frames = mocap_state.snapshot()
             print(
                 "[MOCAP] Fresh pose: "
                 f"pos=({position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}) "
@@ -853,6 +898,21 @@ def figure8_target(center_x, center_y, elapsed_s, radius_x, radius_y):
     )
 
 
+def probe_direction_world(heading_rad, leg_index):
+    """Return a world-frame unit vector for a body-relative probe leg."""
+    forward_x = math.cos(heading_rad)
+    forward_y = math.sin(heading_rad)
+    left_x = -math.sin(heading_rad)
+    left_y = math.cos(heading_rad)
+    directions = (
+        (forward_x, forward_y),
+        (-forward_x, -forward_y),
+        (left_x, left_y),
+        (-left_x, -left_y),
+    )
+    return directions[leg_index]
+
+
 def add_line(stdscr, y, x, text):
     max_y, max_x = stdscr.getmaxyx()
     if y >= max_y or x >= max_x:
@@ -883,7 +943,7 @@ def draw(stdscr, state):
         figure8_status = "READY"
     else:
         figure8_status = "off"
-    add_line(stdscr, 0, 0, "Manual Thrust + Mocap Assisted Figure-8")
+    add_line(stdscr, 0, 0, "Manual Thrust + Mocap Cage-Edge Probe")
     add_line(
         stdscr,
         2,
@@ -891,7 +951,7 @@ def draw(stdscr, state):
         "Controls: R ready | T 3ft hold | Up/Down thrust or Z target | PgDn descent",
     )
     add_line(stdscr, 3, 0, "Trim: W/S pitch +/- | A/D roll -/+ | J/L yaw target -/+ | C clear")
-    add_line(stdscr, 4, 0, "F start figure-8 / return+land | H lock X/Y | Space cut | Q/Esc cut+quit")
+    add_line(stdscr, 4, 0, "F start/stop edge probe | H lock X/Y | Space cut | Q/Esc cut+quit")
     add_line(stdscr, 5, 0, f"Phase: {state['phase']} | {state['message']}")
     add_line(
         stdscr,
@@ -967,17 +1027,17 @@ def draw(stdscr, state):
         stdscr,
         16,
         0,
-        f"Figure-8: {figure8_status} "
-        f"| elapsed={state['figure8_elapsed']:.1f}s "
-        f"| target offset=({state['figure8_target_dx']:+.3f}, {state['figure8_target_dy']:+.3f})",
+        f"Probe: {'ON' if state['probe_active'] else ('RETURN' if state['probe_returning'] else 'off')} "
+        f"| {state['probe_direction']} | target={state['probe_target_distance']:.2f}m "
+        f"| projected={state['probe_projected_distance']:.2f}m",
     )
     add_line(
         stdscr,
         17,
         0,
-        f"Path: {state['figure8_width']:.2f}m x {state['figure8_height']:.2f}m "
-        f"| wall margin={state['figure8_wall_margin']:.2f}m "
-        f"| shrunk={state['figure8_shrunk']}",
+        f"Tracking border: {state['probe_border']} "
+        f"| stale confirmation={PROBE_STALE_BORDER_S:.1f}s "
+        f"| max leg={PROBE_ABSOLUTE_MAX_DISTANCE_M:.1f}m",
     )
     add_line(
         stdscr,
@@ -1030,6 +1090,15 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
     figure8_started_at = None
     figure8_profile = None
     figure8_target_height = None
+    probe_active = False
+    probe_returning = False
+    probe_leg_index = 0
+    probe_heading_rad = yaw_from_quat(start_quat)
+    probe_target_distance = 0.0
+    probe_last_fresh_position = start_position
+    probe_last_fresh_elapsed = 0.0
+    probe_stale_pending = False
+    probe_border_confirmed = [None] * len(PROBE_DIRECTION_NAMES)
     prefigure8_height_hold_active = False
     prefigure8_target_height = PREFIGURE8_HEIGHT_TARGET_M
     altitude_hold_correction = 0.0
@@ -1073,6 +1142,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         nonlocal figure8_target_height, altitude_hold_correction, altitude_integral
         nonlocal prefigure8_height_hold_active
         nonlocal return_land_active, return_land_descent_started
+        nonlocal probe_active, probe_returning, probe_stale_pending
         nonlocal integral_x, integral_y
         if not safety_descent_active:
             safety_descent_reason = reason
@@ -1087,6 +1157,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         figure8_started_at = None
         figure8_profile = None
         figure8_target_height = None
+        probe_active = False
+        probe_returning = False
+        probe_stale_pending = False
         prefigure8_height_hold_active = False
         altitude_hold_correction = 0.0
         altitude_integral = 0.0
@@ -1118,8 +1191,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         if mocap_state is None:
             raise RuntimeError("Internal error: mocap state missing")
 
-        position, quat, last_update, frame_count = mocap_state.snapshot()
-        if position is None or quat is None:
+        position, raw_position, quat, last_update, frame_count = mocap_state.snapshot()
+        if position is None or raw_position is None or quat is None:
             raise RuntimeError("Internal error: mocap pose missing")
 
         mocap_age = now - last_update if last_update else float("inf")
@@ -1132,6 +1205,10 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         if mocap_stale:
             if stale_started_at is None:
                 stale_started_at = now
+                if probe_active:
+                    probe_stale_pending = True
+                    probe_active = False
+                    probe_returning = False
                 stale_saved_figure8_active = figure8_active
                 stale_saved_figure8_started_at = figure8_started_at
                 stale_saved_figure8_profile = figure8_profile
@@ -1154,6 +1231,20 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 integral_y = 0.0
                 message = "Mocap stale: leveling roll/pitch/yaw. Use PgDn or Space if needed."
             stale_for = now - stale_started_at
+            if (
+                probe_stale_pending
+                and stale_for >= PROBE_STALE_BORDER_S
+                and probe_border_confirmed[probe_leg_index] is None
+            ):
+                probe_border_confirmed[probe_leg_index] = {
+                    "distance_m": probe_target_distance,
+                    "position": probe_last_fresh_position,
+                    "elapsed_s": probe_last_fresh_elapsed,
+                }
+                message = (
+                    f"Confirmed {PROBE_DIRECTION_NAMES[probe_leg_index]} tracking "
+                    f"border after {stale_for:.1f}s stale."
+                )
             mocap_stale_coast_active = (
                 stale_for <= MOCAP_STALE_COAST_S
                 and not safety_descent_active
@@ -1199,7 +1290,22 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             yawrate_measured = 0.0
             integral_x = 0.0
             integral_y = 0.0
-            if (
+            if probe_stale_pending:
+                probe_stale_pending = False
+                if not safety_descent_active and stale_for < PROBE_STALE_BORDER_S:
+                    probe_active = True
+                    probe_returning = True
+                    probe_target_distance = 0.0
+                    message = (
+                        f"Mocap reacquired after {stale_for:.1f}s; returning "
+                        f"from {PROBE_DIRECTION_NAMES[probe_leg_index]} to center."
+                    )
+                else:
+                    message = (
+                        f"Mocap reacquired after confirmed "
+                        f"{PROBE_DIRECTION_NAMES[probe_leg_index]} border."
+                    )
+            elif (
                 stale_saved_figure8_active
                 and stale_for <= MOCAP_STALE_RESUME_FIGURE8_S
                 and stale_saved_figure8_profile is not None
@@ -1210,7 +1316,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 figure8_target_height = stale_saved_figure8_target_height
                 return_land_active = False
                 return_land_descent_started = False
-                message = f"Mocap reacquired after {stale_for:.1f}s; resuming figure-8."
+                message = f"Mocap reacquired after {stale_for:.1f}s; resuming path."
             elif stale_for >= MOCAP_RELOCK_AFTER_STALE_S:
                 hold_x, hold_y = position[0], position[1]
                 target_x, target_y = hold_x, hold_y
@@ -1247,6 +1353,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     velocity_z = 0.70 * velocity_z + 0.30 * measured_vz
                     yawrate_measured = 0.70 * yawrate_measured + 0.30 * measured_yawrate
                 previous_sample = (position, yaw, last_update, frame_count)
+            probe_last_fresh_position = position
+            probe_last_fresh_elapsed = now - started_at
 
         key = stdscr.getch()
         key_code = "" if key == -1 else key
@@ -1261,6 +1369,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             target_thrust = 0
             descent_active = False
             safety_descent_active = False
+            probe_active = False
+            probe_returning = False
+            probe_stale_pending = False
             figure8_target_height = None
             prefigure8_height_hold_active = False
             altitude_hold_correction = 0.0
@@ -1272,7 +1383,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         elif key == curses.KEY_UP:
             if safety_descent_active:
                 message = "Safety descent active; thrust increase ignored."
-            elif figure8_active and FIGURE8_ALTITUDE_HOLD_ENABLED:
+            elif (figure8_active or probe_active) and FIGURE8_ALTITUDE_HOLD_ENABLED:
                 if figure8_target_height is None:
                     figure8_target_height = clamp_figure8_height_target(
                         PREFIGURE8_HEIGHT_TARGET_M
@@ -1280,7 +1391,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 figure8_target_height = clamp_figure8_height_target(
                     figure8_target_height + FIGURE8_ALTITUDE_STEP_M
                 )
-                message = f"Figure-8 height target {figure8_target_height:.2f}m."
+                message = f"Probe height target {figure8_target_height:.2f}m."
             elif prefigure8_height_hold_active and PREFIGURE8_HEIGHT_HOLD_ENABLED:
                 prefigure8_target_height = clamp_prefigure8_height_target(
                     prefigure8_target_height + FIGURE8_ALTITUDE_STEP_M
@@ -1291,13 +1402,13 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 descent_active = False
                 message = f"Target thrust +{SMALL_THRUST_UP_STEP}; ramping up."
         elif key == curses.KEY_DOWN:
-            if figure8_active and FIGURE8_ALTITUDE_HOLD_ENABLED:
+            if (figure8_active or probe_active) and FIGURE8_ALTITUDE_HOLD_ENABLED:
                 if figure8_target_height is None:
                     figure8_target_height = clamp_figure8_height_target(current_height)
                 figure8_target_height = clamp_figure8_height_target(
                     figure8_target_height - FIGURE8_ALTITUDE_STEP_M
                 )
-                message = f"Figure-8 height target {figure8_target_height:.2f}m."
+                message = f"Probe height target {figure8_target_height:.2f}m."
             elif prefigure8_height_hold_active and PREFIGURE8_HEIGHT_HOLD_ENABLED:
                 prefigure8_target_height = clamp_prefigure8_height_target(
                     prefigure8_target_height - FIGURE8_ALTITUDE_STEP_M
@@ -1310,13 +1421,13 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         elif key == curses.KEY_PPAGE:
             if safety_descent_active:
                 message = "Safety descent active; thrust increase ignored."
-            elif figure8_active and FIGURE8_ALTITUDE_HOLD_ENABLED:
+            elif (figure8_active or probe_active) and FIGURE8_ALTITUDE_HOLD_ENABLED:
                 if figure8_target_height is None:
                     figure8_target_height = clamp_figure8_height_target(current_height)
                 figure8_target_height = clamp_figure8_height_target(
                     figure8_target_height + FIGURE8_ALTITUDE_BIG_STEP_M
                 )
-                message = f"Figure-8 height target {figure8_target_height:.2f}m."
+                message = f"Probe height target {figure8_target_height:.2f}m."
             elif prefigure8_height_hold_active and PREFIGURE8_HEIGHT_HOLD_ENABLED:
                 prefigure8_target_height = clamp_prefigure8_height_target(
                     prefigure8_target_height + FIGURE8_ALTITUDE_BIG_STEP_M
@@ -1338,8 +1449,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 message = "Safety descent active; 3ft height hold ignored."
             elif mocap_stale:
                 message = "Cannot start 3ft height hold while mocap is stale."
-            elif figure8_active or return_land_active:
-                message = "3ft height hold is only for before figure-8."
+            elif figure8_active or probe_active or return_land_active:
+                message = "3ft height hold is only for before the edge probe."
             elif prefigure8_height_hold_active:
                 prefigure8_height_hold_active = False
                 altitude_hold_correction = 0.0
@@ -1425,6 +1536,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 figure8_started_at = None
                 figure8_profile = None
                 figure8_target_height = None
+                probe_active = False
+                probe_returning = False
                 prefigure8_height_hold_active = False
                 altitude_hold_correction = 0.0
                 altitude_integral = 0.0
@@ -1435,8 +1548,10 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 message = "Locked current X/Y as new hold target."
         elif key in (ord("f"), ord("F")):
             if mocap_stale:
-                message = "Cannot start figure-8 while mocap is stale."
-            elif figure8_active:
+                message = "Cannot start the edge probe while mocap is stale."
+            elif probe_active:
+                probe_active = False
+                probe_returning = False
                 figure8_active = False
                 figure8_started_at = None
                 figure8_profile = None
@@ -1450,7 +1565,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 descent_active = False
                 integral_x = 0.0
                 integral_y = 0.0
-                message = "Returning to figure-8 start; landing when close."
+                message = "Edge probe stopped; returning to center and landing when close."
             elif return_land_active:
                 hold_x, hold_y = position[0], position[1]
                 target_x, target_y = hold_x, hold_y
@@ -1467,31 +1582,39 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             else:
                 error_to_hold = math.hypot(position[0] - hold_x, position[1] - hold_y)
                 horizontal_start_speed = math.hypot(velocity_x, velocity_y)
-                requested_profile = make_figure8_profile(position[0], position[1])
                 if abs(velocity_z) > FIGURE8_MAX_START_VERTICAL_SPEED_M_S:
                     message = (
-                        f"Figure-8 rejected: vertical speed {velocity_z:+.2f}m/s "
+                        f"Edge probe rejected: vertical speed {velocity_z:+.2f}m/s "
                         f"exceeds {FIGURE8_MAX_START_VERTICAL_SPEED_M_S:.2f}m/s."
                     )
                 elif horizontal_start_speed > FIGURE8_MAX_START_HORIZONTAL_SPEED_M_S:
                     message = (
-                        f"Figure-8 rejected: XY speed {horizontal_start_speed:.2f}m/s "
+                        f"Edge probe rejected: XY speed {horizontal_start_speed:.2f}m/s "
                         f"exceeds {FIGURE8_MAX_START_HORIZONTAL_SPEED_M_S:.2f}m/s."
                     )
                 elif error_to_hold > FIGURE8_MAX_START_ERROR_M:
                     message = (
-                        f"Figure-8 rejected: hold error {error_to_hold:.3f}m "
+                        f"Edge probe rejected: hold error {error_to_hold:.3f}m "
                         f"exceeds {FIGURE8_MAX_START_ERROR_M:.3f}m."
                     )
-                elif requested_profile is None:
-                    message = "Figure-8 rejected: hold point is too close to the cage wall."
                 else:
                     hold_x, hold_y = position[0], position[1]
                     target_x, target_y = hold_x, hold_y
                     hold_target_frozen = True
-                    figure8_active = True
-                    figure8_started_at = now
-                    figure8_profile = requested_profile
+                    probe_active = True
+                    probe_returning = False
+                    probe_leg_index = 0
+                    # The figure-8 controller may apply a 180-degree control
+                    # frame correction. That is useful for X/Y stabilization,
+                    # but it inverted the human-facing "forward" probe label
+                    # in the first edge-probe run. Survey directions use the
+                    # raw OptiTrack heading captured at F instead.
+                    probe_heading_rad = yaw_from_quat(quat)
+                    probe_target_distance = 0.0
+                    probe_border_confirmed = [None] * len(PROBE_DIRECTION_NAMES)
+                    figure8_active = False
+                    figure8_started_at = None
+                    figure8_profile = None
                     figure8_target_height = clamp_figure8_height_target(current_height)
                     prefigure8_height_hold_active = False
                     altitude_hold_correction = 0.0
@@ -1500,13 +1623,10 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     return_land_descent_started = False
                     integral_x = 0.0
                     integral_y = 0.0
-                    if FIGURE8_ALTITUDE_HOLD_ENABLED:
-                        message = (
-                            f"{figure8_profile.message} Z hold target "
-                            f"{figure8_target_height:.2f}m."
-                        )
-                    else:
-                        message = f"{figure8_profile.message} Keep altitude with thrust."
+                    message = (
+                        "Edge probe active: forward first, then backward, left, right. "
+                        f"Z hold target {figure8_target_height:.2f}m."
+                    )
 
         # Re-apply this after keyboard handling so an Up/PgUp tap cannot
         # accidentally override the stale-mocap descent guard for one loop.
@@ -1604,13 +1724,13 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         altitude_correction_slew = FIGURE8_ALTITUDE_CORRECTION_SLEW_RAW_PER_S
         if (
             FIGURE8_ALTITUDE_HOLD_ENABLED
-            and figure8_active
+            and (figure8_active or probe_active)
             and not mocap_stale
             and not safety_descent_active
             and not descent_active
             and figure8_target_height is not None
         ):
-            height_assist_mode = "figure8"
+            height_assist_mode = "probe" if probe_active else "figure8"
             figure8_target_height = clamp_figure8_height_target(figure8_target_height)
             height_assist_target = figure8_target_height
         elif (
@@ -1791,6 +1911,32 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             figure8_ramp = 0.0
             figure8_path_elapsed = 0.0
 
+        probe_direction_name = PROBE_DIRECTION_NAMES[probe_leg_index]
+        probe_direction_x, probe_direction_y = probe_direction_world(
+            probe_heading_rad,
+            probe_leg_index,
+        )
+        probe_projected_distance = (
+            (position[0] - hold_x) * probe_direction_x
+            + (position[1] - hold_y) * probe_direction_y
+        )
+        if probe_active and not probe_returning and not mocap_stale:
+            measured_ahead_limit = max(0.0, probe_projected_distance) + PROBE_TARGET_LOOKAHEAD_M
+            probe_target_distance = min(
+                PROBE_ABSOLUTE_MAX_DISTANCE_M,
+                probe_target_distance + PROBE_TARGET_SPEED_M_S * dt,
+                measured_ahead_limit,
+            )
+            if (
+                probe_target_distance >= PROBE_ABSOLUTE_MAX_DISTANCE_M
+                and probe_projected_distance >= PROBE_ABSOLUTE_MAX_DISTANCE_M - PROBE_CENTER_TOLERANCE_M
+            ):
+                probe_returning = True
+                message = (
+                    f"{probe_direction_name.title()} reached the "
+                    f"{PROBE_ABSOLUTE_MAX_DISTANCE_M:.1f}m backstop; returning to center."
+                )
+
         if safety_descent_active:
             target_x, target_y = hold_x, hold_y
             phase = "safety-descent"
@@ -1804,6 +1950,14 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 if descent_active or return_land_descent_started
                 else "return-home"
             )
+        elif probe_active:
+            if probe_returning:
+                target_x, target_y = hold_x, hold_y
+                phase = "probe-return"
+            else:
+                target_x = hold_x + probe_direction_x * probe_target_distance
+                target_y = hold_y + probe_direction_y * probe_target_distance
+                phase = f"probe-{probe_direction_name}"
         elif (
             figure8_active
             and figure8_started_at is not None
@@ -1845,17 +1999,41 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             and not safety_descent_active
             and not descent_active
             and not figure8_active
+            and not probe_active
             and not return_land_active
             and not mocap_stale
             and key == -1
         ):
             if prefigure8_height_ready:
-                message = "3ft height ready; press F to start figure-8."
+                message = "3ft height ready; press F to start the edge probe."
             else:
                 message = (
                     f"3ft height hold: {prefigure8_height_error:+.2f}m "
                     "from target."
                 )
+        if (
+            probe_active
+            and probe_returning
+            and not mocap_stale
+            and not safety_descent_active
+            and not descent_active
+            and return_home_error <= PROBE_CENTER_TOLERANCE_M
+            and speed <= PROBE_CENTER_SPEED_M_S
+        ):
+            if probe_leg_index + 1 < len(PROBE_DIRECTION_NAMES):
+                probe_leg_index += 1
+                probe_returning = False
+                probe_target_distance = 0.0
+                integral_x = 0.0
+                integral_y = 0.0
+                message = (
+                    f"Back at center; starting {PROBE_DIRECTION_NAMES[probe_leg_index]} leg."
+                )
+            else:
+                probe_active = False
+                return_land_active = True
+                return_land_descent_started = False
+                message = "All four probe legs complete; landing at center."
         if (
             return_land_active
             and not descent_active
@@ -1869,10 +2047,10 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 descent_active = True
                 return_land_descent_started = True
                 target_thrust = min(target_thrust, thrust)
-                message = "At figure-8 start; slow landing ramp active."
+                message = "At probe center; slow landing ramp active."
             else:
                 message = (
-                    f"Returning to figure-8 start: {return_home_error:.2f}m away. "
+                    f"Returning to probe center: {return_home_error:.2f}m away. "
                     "Landing when close."
                 )
         if figure8_active:
@@ -1916,6 +2094,12 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             target_error_limit = RETURN_HOME_TARGET_ERROR_LIMIT_M
         elif return_land_active:
             target_error_limit = RETURN_HOME_TARGET_ERROR_LIMIT_M
+        elif probe_active:
+            target_error_limit = (
+                RETURN_HOME_TARGET_ERROR_LIMIT_M
+                if probe_returning
+                else PROBE_TARGET_ERROR_LIMIT_M
+            )
         elif figure8_active and figure8_profile is not None:
             if figure8_elapsed < FIGURE8_STARTUP_RAMP_S:
                 target_error_limit = max(
@@ -1940,9 +2124,13 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 target_error_exceeded_since = now
             target_error_exceeded_s = now - target_error_exceeded_since
             target_error_grace_s = (
-                FIGURE8_TARGET_ERROR_GRACE_S
-                if figure8_active and figure8_profile is not None
-                else TARGET_ERROR_GRACE_S
+                PROBE_TARGET_ERROR_GRACE_S
+                if probe_active
+                else (
+                    FIGURE8_TARGET_ERROR_GRACE_S
+                    if figure8_active and figure8_profile is not None
+                    else TARGET_ERROR_GRACE_S
+                )
             )
             if target_error_exceeded_s >= target_error_grace_s:
                 start_safety_descent(
@@ -2003,6 +2191,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     base_angle_limit,
                     CONTROLLED_SAFETY_DESCENT_MAX_ANGLE_DEG,
                 )
+            elif probe_active and height >= FULL_AUTHORITY_HEIGHT_M:
+                base_angle_limit = max(base_angle_limit, PROBE_MAX_ANGLE_DEG)
             elif figure8_active and height >= FULL_AUTHORITY_HEIGHT_M:
                 base_angle_limit = max(base_angle_limit, FIGURE8_MAX_ANGLE_DEG)
             angle_limit = assist_blend * base_angle_limit
@@ -2122,6 +2312,25 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "target_error_y_m": error_y,
                 "target_error_m": target_error,
                 "target_error_exceeded_s": target_error_exceeded_s,
+                "probe_active": int(probe_active),
+                "probe_returning": int(probe_returning),
+                "probe_leg_index": probe_leg_index,
+                "probe_direction": probe_direction_name,
+                "probe_heading_deg": math.degrees(probe_heading_rad),
+                "probe_target_distance_m": probe_target_distance,
+                "probe_projected_distance_m": probe_projected_distance,
+                "probe_confirmed_border": int(
+                    probe_border_confirmed[probe_leg_index] is not None
+                ),
+                "probe_border_distance_m": (
+                    probe_border_confirmed[probe_leg_index]["distance_m"]
+                    if probe_border_confirmed[probe_leg_index] is not None
+                    else ""
+                ),
+                "probe_last_fresh_x_m": probe_last_fresh_position[0],
+                "probe_last_fresh_y_m": probe_last_fresh_position[1],
+                "probe_last_fresh_z_m": probe_last_fresh_position[2],
+                "probe_last_fresh_elapsed_s": probe_last_fresh_elapsed,
                 "figure8_active": int(figure8_active),
                 "return_land_active": int(return_land_active),
                 "return_home_error_m": return_home_error,
@@ -2158,6 +2367,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "mocap_x": position[0],
                 "mocap_y": position[1],
                 "mocap_z": position[2],
+                "raw_mocap_x": raw_position[0],
+                "raw_mocap_y": raw_position[1],
+                "raw_mocap_z": raw_position[2],
                 "mocap_qx": quat.x,
                 "mocap_qy": quat.y,
                 "mocap_qz": quat.z,
@@ -2213,6 +2425,17 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "target_y": target_y,
                 "target_error": target_error,
                 "figure8_active": figure8_active,
+                "probe_active": probe_active,
+                "probe_returning": probe_returning,
+                "probe_direction": probe_direction_name,
+                "probe_target_distance": probe_target_distance,
+                "probe_projected_distance": probe_projected_distance,
+                "probe_border": (
+                    f"{probe_direction_name} @ "
+                    f"{probe_border_confirmed[probe_leg_index]['distance_m']:.2f}m"
+                    if probe_border_confirmed[probe_leg_index] is not None
+                    else "not yet confirmed"
+                ),
                 "return_land_active": return_land_active,
                 "return_home_error": return_home_error,
                 "figure8_ready": figure8_ready,
@@ -2263,14 +2486,14 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
 
         time.sleep(COMMAND_PERIOD_S)
 
-    return thrust
+    return probe_border_confirmed
 
 def main():
     logging.basicConfig(level=logging.ERROR)
     cflib.crtp.init_drivers()
 
     print("=" * 72)
-    print("MANUAL THRUST + MOCAP ASSISTED FIGURE-8")
+    print("MANUAL THRUST + MOCAP CAGE-EDGE PROBE")
     print("=" * 72)
     print(f"URI: {URI}")
     print(f"Mocap: {RIGID_BODY_NAME}@{MOCAP_HOST}")
@@ -2278,7 +2501,7 @@ def main():
     print(
         f"Thrust keys: Up +{SMALL_THRUST_UP_STEP}, "
         f"Down -{SMALL_THRUST_DOWN_STEP}, PgUp +{BIG_THRUST_STEP}; "
-        "during 3ft/figure-8 hold these nudge the Z target"
+        "during 3ft/probe hold these nudge the Z target"
     )
     print(
         f"3ft helper: T toggles target {PREFIGURE8_HEIGHT_TARGET_M:.2f}m "
@@ -2298,7 +2521,6 @@ def main():
     measured_bounds = bounds_from_points(local_cage_corner_points())
     raw_bounds = cage_bounds(0.0)
     flight_bounds = cage_bounds(CAGE_WALL_MARGIN_M)
-    planning_bounds = cage_bounds(CAGE_WALL_MARGIN_M + FIGURE8_TRACKING_RESERVE_M)
     print(
         f"Measured local cage bounds: X[{measured_bounds['x_min']:.2f}, "
         f"{measured_bounds['x_max']:.2f}], "
@@ -2312,9 +2534,9 @@ def main():
         f"Y[{raw_bounds['y_min']:.2f}, {raw_bounds['y_max']:.2f}]"
     )
     print(
-        f"Cage flight bounds: X[{flight_bounds['x_min']:.2f}, {flight_bounds['x_max']:.2f}], "
-        f"Y[{flight_bounds['y_min']:.2f}, {flight_bounds['y_max']:.2f}], "
-        f"planning reserve bounds X[{planning_bounds['x_min']:.2f}, {planning_bounds['x_max']:.2f}]"
+        f"Old cage reference bounds (not enforced): X[{flight_bounds['x_min']:.2f}, "
+        f"{flight_bounds['x_max']:.2f}], Y[{flight_bounds['y_min']:.2f}, "
+        f"{flight_bounds['y_max']:.2f}]"
     )
     print(
         f"Hard stops: climb <= {MAX_CLIMB_RATE_M_S:.2f}m/s, "
@@ -2336,14 +2558,17 @@ def main():
         f"max=+/-{MAX_ROLL_PITCH_TRIM_DEG:.1f} deg, yaw step={YAW_TARGET_STEP_DEG:.1f} deg"
     )
     print(
-        f"Figure-8 request: width {FIGURE8_RADIUS_X_M:.2f}m x "
-        f"height {2.0 * FIGURE8_RADIUS_Y_M:.2f}m, period {FIGURE8_PERIOD_S:.1f}s; "
-        f"startup ramp {FIGURE8_STARTUP_RAMP_S:.1f}s, "
-        f"figure-8 angle cap {FIGURE8_MAX_ANGLE_DEG:.1f}deg; "
-        "auto-shrinks if the hold point is too close to a wall"
+        f"Probe plan: center -> forward -> center -> backward -> center -> "
+        "left -> center -> right -> center"
     )
     print(
-        f"Figure-8 Z hold: enabled={FIGURE8_ALTITUDE_HOLD_ENABLED}, "
+        f"Probe: {PROBE_TARGET_SPEED_M_S:.2f}m/s target speed, "
+        f"{PROBE_TARGET_LOOKAHEAD_M:.2f}m lookahead, "
+        f"{PROBE_ABSOLUTE_MAX_DISTANCE_M:.1f}m hard backstop, "
+        f"{PROBE_STALE_BORDER_S:.1f}s stale confirmation"
+    )
+    print(
+        f"Probe Z hold: enabled={FIGURE8_ALTITUDE_HOLD_ENABLED}, "
         f"step={FIGURE8_ALTITUDE_STEP_M:.2f}m, "
         f"correction <= +/-{FIGURE8_ALTITUDE_CORRECTION_LIMIT_RAW:.0f} raw"
     )
@@ -2357,6 +2582,7 @@ def main():
     logger = CsvLogger()
     visualizer_process = start_live_visualizer(logger.output_path)
     cf = None
+    probe_results = [None] * len(PROBE_DIRECTION_NAMES)
 
     clean_exit = False
     try:
@@ -2406,7 +2632,7 @@ def main():
                 f"offset={body_yaw_offset_deg:+.1f} deg ({auto_note})."
             )
 
-            curses.wrapper(
+            probe_results = curses.wrapper(
                 run_control_loop,
                 cf,
                 mocap_state,
@@ -2418,6 +2644,16 @@ def main():
             )
 
             print("\n[INFO] Flight loop ended.")
+            for direction, result in zip(PROBE_DIRECTION_NAMES, probe_results):
+                if result is None:
+                    print(f"[PROBE] {direction}: no confirmed stale border.")
+                else:
+                    x, y, z = result["position"]
+                    print(
+                        f"[PROBE] {direction}: border at target "
+                        f"{result['distance_m']:.2f}m; last fresh local "
+                        f"=({x:.3f}, {y:.3f}, {z:.3f})m."
+                    )
             send_zero_thrust(cf, count=25)
             send_arming_request(cf, False)
             altitude_log.stop()
