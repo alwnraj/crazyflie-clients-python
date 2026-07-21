@@ -11,9 +11,9 @@ The verified powered-flight path is the low-level, manual-thrust workflow in
 `mocap_manual_thrust_assisted_figure8.py`: establish a low hover with `R`, use
 `T` to settle near 3 ft, press `F` for one figure-8, then press `F` again to
 return to the figure-8 start and land. The current compact fast-path campaign
-uses an error- and cage-governed `4.20x` nominal figure-8 clock with a `23 deg`
+uses an error- and cage-governed `5.70x` nominal figure-8 clock with a `26 deg`
 figure-8-only attitude cap. The reviewed
-`mocap-assisted-figure8-20260721-091750.csv` run completed normally without
+`mocap-assisted-figure8-20260721-100041.csv` run completed normally without
 stale mocap or a safety descent. Read
 [`MOCAP_MANUAL_FIGURE8.md`](MOCAP_MANUAL_FIGURE8.md) for current controls,
 safety semantics, active constants, and log evidence; this runbook intentionally

@@ -64,34 +64,37 @@ The current manual-flight baseline is a compact, fast figure-8. The script is
 the source of truth for its active constants; at this update the relevant
 settings are:
 
-- `FIGURE8_NOMINAL_SPEED_SCALE = 4.20`, which is a `5.7 s` nominal path-clock
+- `FIGURE8_NOMINAL_SPEED_SCALE = 5.70`, which is a `4.2 s` nominal path-clock
   period from the `24 s` reference profile.
-- `FIGURE8_MAX_ANGLE_DEG = 23.0` during an airborne figure-8.
+- `FIGURE8_MAX_ANGLE_DEG = 26.0` during an airborne figure-8.
 - `FIGURE8_TARGET_VELOCITY_FEEDFORWARD = 0.70` so the X/Y controller follows a
   moving target instead of reacting only after position error appears.
-- `FIGURE8_SPEEDUP_SCALE_PER_S = 0.70`; the path clock recovers more promptly
+- `FIGURE8_SPEEDUP_SCALE_PER_S = 1.00`; the path clock recovers more promptly
   after a slow section.
 - Figure-8 altitude correction is assisted by tilt-thrust compensation, capped
-  at `2800 raw` in addition to the normal Z PID correction.
+  at `3400 raw` in addition to the normal Z PID correction.
+- The shared center crossing uses a cubic vertical profile (`sin(phase)^3`).
+  It preserves the same path extents while removing the prior abrupt vertical
+  curvature reversal between the top and bottom lobes.
 
 These settings were progressed through a sequence of reviewed successful
 flights. The latest reviewed log,
-`flight_logs/mocap-assisted-figure8-20260721-091750.csv`, completed the
+`flight_logs/mocap-assisted-figure8-20260721-100041.csv`, completed the
 figure-8 and entered normal return/descent with no stale-mocap or safety event.
 During its figure-8 phase it recorded:
 
 | Metric | Result |
 | --- | ---: |
-| Horizontal speed, median / p95 / peak | `1.97 / 2.66 / 3.12 m/s` |
-| Target error, median / p95 / peak | `0.50 / 0.71 / 0.86 m` |
-| Height above start, median / p95 | `0.96 / 1.06 m` |
-| Pitch cap reached | `6.1%` of figure-8 samples |
-| Tilt compensation at its cap | `8.7%` of figure-8 samples |
+| Horizontal speed, median / p95 / peak | `2.13 / 2.76 / 3.16 m/s` |
+| Target error, median / p95 / peak | `0.52 / 0.79 / 0.86 m` |
+| Height above start, median / p95 | `1.00 / 1.12 m` |
+| Pitch or roll cap reached | `1.5%` of figure-8 samples |
+| Tilt compensation at its cap | `8.6%` of figure-8 samples |
 
 The nominal speed is not a promise that every part of the path advances at
 that rate. The script slows the path clock when tracking error grows or when
 cage clearance narrows. In the latest run the path clock was below `3.0x` for
-about `85%` of figure-8 samples. This is intentional: tracking and cage margin
+about `81%` of figure-8 samples. This is intentional: tracking and cage margin
 win over requested speed. More speed should be validated from fresh logs, not
 assumed from a higher nominal constant.
 

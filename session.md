@@ -36,9 +36,9 @@ controlled descent behavior.
 - Fast banking exposed altitude loss. The Z controller gained conditional
   integral behavior and bank-angle thrust compensation. The latter adds the
   vertical thrust support displaced by commanded roll/pitch, while the Z PID
-  remains responsible for residual error. Its current cap is `2800 raw`.
+  remains responsible for residual error. Its current cap is `3400 raw`.
 - Figure-8-only attitude authority was progressively raised while ground and
-  takeoff caps remained conservative. The current figure-8 cap is `23 deg`.
+  takeoff caps remained conservative. The current figure-8 cap is `26 deg`.
 
 ### Safety Decisions
 
@@ -63,22 +63,26 @@ remain important.
 The compact route was increased through successive clean logs. By
 `mocap-assisted-figure8-20260721-085425.csv`, nominal scale was `3.30x` with
 approximately `1.86 m/s` median and `2.60 m/s` p95 horizontal speed. The next
-reviewed steps raised the nominal clock to `3.55x`, `3.85x`, then `4.20x`, with
-the matching angle and tilt-support changes. The `4.20x` run in
-`mocap-assisted-figure8-20260721-091750.csv` completed its figure-8 and
+reviewed steps raised the nominal clock to `3.55x`, `3.85x`, `4.20x`, `4.65x`,
+`5.15x`, then `5.70x`, with matching angle and tilt-support changes. At the
+higher speeds, the old signed-square vertical lobe profile produced a visible
+break at the shared center because its curvature reversed abruptly there. It
+was replaced by a cubic `sin(phase)^3` vertical profile with the same path
+center and extents but a smooth center crossing. The `5.70x` smooth-center run
+in `mocap-assisted-figure8-20260721-100041.csv` completed its figure-8 and
 entered normal return/descent with no stale-mocap or safety event:
 
 | Metric | Figure-8 result |
 | --- | ---: |
-| Duration | `29.78 s` |
-| Horizontal speed, median / p95 / peak | `1.97 / 2.66 / 3.12 m/s` |
-| Target error, median / p95 / peak | `0.50 / 0.71 / 0.86 m` |
-| Height above start, median / p95 / peak | `0.96 / 1.06 / 1.14 m` |
-| Pitch at angle cap | `6.1%` of samples |
-| Tilt compensation at cap | `8.7%` of samples |
+| Duration | `28.66 s` |
+| Horizontal speed, median / p95 / peak | `2.13 / 2.76 / 3.16 m/s` |
+| Target error, median / p95 / peak | `0.52 / 0.79 / 0.86 m` |
+| Height above start, median / p95 / peak | `1.00 / 1.12 / 1.16 m` |
+| Pitch or roll at angle cap | `1.5%` of samples |
+| Tilt compensation at cap | `8.6%` of samples |
 
-The commanded path clock reached `4.20x` but remained below `3.0x` for about
-`85%` of samples. That governor activity is expected at the present envelope:
+The commanded path clock reached `5.70x` but remained below `3.0x` for about
+`81%` of samples. That governor activity is expected at the present envelope:
 the path is being deliberately slowed to preserve tracking. Future speed work
 must evaluate actual speed and saturation, not just increase the nominal scale.
 

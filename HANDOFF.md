@@ -25,21 +25,23 @@ The controller was advanced through reviewed, clean runs from 2026-07-20 to
 - moving-target velocity feedforward in the horizontal controller;
 - error- and cage-governed path-clock speed, so the target slows before error
   becomes a safety problem;
-- a ramped nominal speed progression to `4.20x`, with faster clock recovery;
-- figure-8 attitude authority increased to `23 deg` only for airborne path
+- a ramped nominal speed progression to `5.70x`, with faster clock recovery;
+- figure-8 attitude authority increased to `26 deg` only for airborne path
   tracking;
 - velocity plausibility filtering for isolated mocap derivative spikes;
 - conditional altitude-integral handling plus bank-angle thrust compensation
   to reduce height loss in fast turns;
+- a cubic vertical center crossing that removes the old abrupt curvature flip
+  between the top and bottom lobes without changing figure-8 extents;
 - persistent cage-violation grace, rather than an immediate descent on a
   single near-boundary sample.
 
 The current configuration should be treated as a reviewed experiment baseline,
-not a ceiling. In `mocap-assisted-figure8-20260721-091750.csv`, the figure-8
+not a ceiling. In `mocap-assisted-figure8-20260721-100041.csv`, the figure-8
 completed with no stale-mocap or safety event, then moved into controlled
 return/descent. Figure-8 median/p95/peak horizontal speed was
-`1.97 / 2.66 / 3.12 m/s`; median/p95/peak target error was
-`0.50 / 0.71 / 0.86 m`. The path clock spent much of the route governed below
+`2.13 / 2.76 / 3.16 m/s`; median/p95/peak target error was
+`0.52 / 0.79 / 0.86 m`. The path clock spent much of the route governed below
 its nominal value, and pitch plus tilt compensation occasionally reached their
 limits. Those are the next performance constraints to assess before any
 further speed increase.

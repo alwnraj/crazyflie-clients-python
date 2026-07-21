@@ -212,7 +212,7 @@ TAKEOFF_XY_ASSIST_FULL_HEIGHT_M = 0.04
 TAKEOFF_XY_ASSIST_START_THRUST_RAW = 24000
 TAKEOFF_XY_ASSIST_FULL_THRUST_RAW = 32000
 MAX_ANGLE_DEG = 12.0
-FIGURE8_MAX_ANGLE_DEG = 23.0
+FIGURE8_MAX_ANGLE_DEG = 26.0
 AGGRESSIVE_ERROR_M = 0.08
 AGGRESSIVE_GAIN_SCALE = 1.7
 
@@ -247,13 +247,13 @@ FIGURE8_STARTUP_RAMP_S = 8.0
 # The path normally advances faster than the 24 s reference profile.
 # When tracking error grows, the governor slows only the path clock; the
 # proven X/Y controller, attitude limits, and all safety limits stay intact.
-FIGURE8_NOMINAL_SPEED_SCALE = 4.20
+FIGURE8_NOMINAL_SPEED_SCALE = 5.70
 FIGURE8_MIN_SPEED_SCALE = 0.60
 FIGURE8_SLOWDOWN_START_ERROR_M = 0.30
 FIGURE8_SLOWDOWN_FULL_ERROR_M = 0.75
 # Recover promptly after the error governor releases the path clock; slowdown
 # remains deliberately faster so tracking error still wins over path speed.
-FIGURE8_SPEEDUP_SCALE_PER_S = 0.70
+FIGURE8_SPEEDUP_SCALE_PER_S = 1.00
 FIGURE8_SLOWDOWN_SCALE_PER_S = 2.00
 # Slow the target before tracking lag carries the aircraft into a cage wall.
 # This is an additional path-clock governor; it does not relax the hard cage
@@ -287,7 +287,7 @@ FIGURE8_ALTITUDE_CORRECTION_SLEW_RAW_PER_S = 4000.0
 # existing Z PID remains responsible for residual error and recovery.
 FIGURE8_TILT_THRUST_COMPENSATION_ENABLED = True
 FIGURE8_TILT_THRUST_COMPENSATION_SCALE = 1.00
-FIGURE8_TILT_THRUST_COMPENSATION_LIMIT_RAW = 2800.0
+FIGURE8_TILT_THRUST_COMPENSATION_LIMIT_RAW = 3400.0
 
 # Misc.
 OUTPUT_DIR = "flight_logs"
@@ -1098,19 +1098,18 @@ def figure8_speed_scale_for_error(target_error):
 
 
 def figure8_target(center_x, center_y, elapsed_s, radius_x, radius_y):
-    # Wrap the phase so every cycle repeats top lobe, then bottom lobe.
+    # A standing figure-8: top lobe first, then bottom lobe.
+    #
+    # x follows sin(2 * phase), so each lobe sweeps left and right before
+    # returning through the shared center. y uses sin(phase)^3 instead of the
+    # older signed sin(phase)^2. Both have the same center and extents, but the
+    # cubic form makes vertical acceleration reach zero at the center crossing.
+    # That avoids an abrupt curvature flip that looked like a brake at speed.
     phase = 2.0 * math.pi * ((elapsed_s % FIGURE8_PERIOD_S) / FIGURE8_PERIOD_S)
-    if phase < math.pi:
-        lobe_phase = 2.0 * phase
-        y_sign = 1.0
-    else:
-        lobe_phase = 2.0 * (phase - math.pi)
-        y_sign = -1.0
-
     half_x = 0.5 * radius_x
     return (
-        center_x + half_x * math.sin(lobe_phase),
-        center_y + y_sign * 0.5 * radius_y * (1.0 - math.cos(lobe_phase)),
+        center_x + half_x * math.sin(2.0 * phase),
+        center_y + radius_y * math.sin(phase) ** 3,
     )
 
 
