@@ -8,6 +8,89 @@ Branch: `aimslab/work`
 
 Work through the local Crazyflie client repo, review recent `alwnraj` changes, get the repo running, validate controller input, and diagnose mocap flight behavior.
 
+## 2026-07-20 to 2026-07-21 Fast Figure-8 Development Record
+
+`mocap_manual_thrust_assisted_figure8.py` is now the working manual-thrust
+flight baseline. The user established that its frame signs, raw-thrust
+takeoff, 3 ft helper, compact figure-8 planning, and return/land behavior are
+the base truth for further work. The campaign objective was to increase actual
+figure-8 performance while retaining mocap tracking, cage protection, and
+controlled descent behavior.
+
+### Controller Changes and Why
+
+- The path planner remained on the older compact raw-corner model after a
+  larger measured-corridor route was shown feasible. The measured corridor is
+  still used for hard cage checks and speed governing. This kept geometry
+  constant while speed was evaluated.
+- A figure-8 target-velocity term was added to the existing body-frame PD
+  controller. Position error still provides correction, while the feedforward
+  term reduces lag behind a moving target.
+- The figure-8 clock was separated from wall time. Its requested nominal scale
+  can increase, but error and cage-clearance governors slow it when tracking
+  needs room to recover. A higher nominal setting therefore does not bypass
+  safety or force a fixed high speed through turns.
+- A single unexpected mocap position jump produced an unrealistically large
+  derivative. Horizontal and vertical velocity measurements are now clamped
+  before filtering at `5.0 m/s` and `2.0 m/s` respectively.
+- Fast banking exposed altitude loss. The Z controller gained conditional
+  integral behavior and bank-angle thrust compensation. The latter adds the
+  vertical thrust support displaced by commanded roll/pitch, while the Z PID
+  remains responsible for residual error. Its current cap is `2800 raw`.
+- Figure-8-only attitude authority was progressively raised while ground and
+  takeoff caps remained conservative. The current figure-8 cap is `23 deg`.
+
+### Safety Decisions
+
+The user requested that automatic race conditions and guards lead to safety
+descent rather than a hard cut. The controller now uses controlled descent for
+stale mocap, persistent cage crossing, target error, climb-rate, and cleanup
+after an unexpected host-side exit. `Space` intentionally remains the manual
+emergency hard cut. `Q`/Esc was changed from cut-and-quit to request a safety
+descent and exit after landing.
+
+The 2026-07-20 log `mocap-assisted-figure8-20260720-092217.csv` was reviewed
+after the vehicle fell with an apparent motor stop. Logged command thrust
+remained about `34k..37k` during the fall, while battery voltage collapsed to
+about `2.28 V`; the later `Q` action occurred during descent. The best current
+interpretation is an external power/device-side event rather than a controller
+hard cut. This is a log-based inference, not proof. The user explicitly chose
+to leave `ENFORCE_BATTERY_LIMITS = False`; warnings and physical pack checks
+remain important.
+
+### Reviewed Performance Progression
+
+The compact route was increased through successive clean logs. By
+`mocap-assisted-figure8-20260721-085425.csv`, nominal scale was `3.30x` with
+approximately `1.86 m/s` median and `2.60 m/s` p95 horizontal speed. The next
+reviewed steps raised the nominal clock to `3.55x`, `3.85x`, then `4.20x`, with
+the matching angle and tilt-support changes. The `4.20x` run in
+`mocap-assisted-figure8-20260721-091750.csv` completed its figure-8 and
+entered normal return/descent with no stale-mocap or safety event:
+
+| Metric | Figure-8 result |
+| --- | ---: |
+| Duration | `29.78 s` |
+| Horizontal speed, median / p95 / peak | `1.97 / 2.66 / 3.12 m/s` |
+| Target error, median / p95 / peak | `0.50 / 0.71 / 0.86 m` |
+| Height above start, median / p95 / peak | `0.96 / 1.06 / 1.14 m` |
+| Pitch at angle cap | `6.1%` of samples |
+| Tilt compensation at cap | `8.7%` of samples |
+
+The commanded path clock reached `4.20x` but remained below `3.0x` for about
+`85%` of samples. That governor activity is expected at the present envelope:
+the path is being deliberately slowed to preserve tracking. Future speed work
+must evaluate actual speed and saturation, not just increase the nominal scale.
+
+### Current Next-Test Criteria
+
+Before another increase, inspect the new CSV for a normal return/landing,
+no stale segment or safety descent, target-error distribution, median/p95/peak
+actual horizontal speed, attitude-cap fraction, tilt-compensation saturation,
+height spread, and battery voltage. Treat increased cap time, repeated error
+governing, or worsening height spread as a reason to tune/review before another
+speed step.
+
 ## 2026-07-13 Current Manual Figure-8 Baseline
 
 The active powered-flight script is `mocap_manual_thrust_assisted_figure8.py`.

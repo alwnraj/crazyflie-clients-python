@@ -41,9 +41,8 @@ reports that the image could not be produced.
 
 ## Proven Flight Sequence
 
-The current baseline is the successful run from 2026-07-13. It completed one
-48-second figure-8 at roughly 3 ft, then returned to its figure-8 start point
-and landed. Use this sequence:
+This sequence was established by the successful 2026-07-13 manual baseline
+and remains the required entry sequence for the current faster path profile:
 
 1. Arm when prompted, then press `R` to ramp to ready thrust.
 2. Establish a low, stable hover.
@@ -59,20 +58,52 @@ the drone is still climbing produces a distorted path.
 
 ## Current Verified Baseline
 
-The latest verified run used this sequence successfully:
+### 2026-07-21 Fast Compact Figure-8
 
-- `R` ramped to the ready-thrust target and established a low hover.
-- `T` engaged the pre-figure-8 height helper and settled near `0.91 m` above
-  the recorded start position.
-- One `F` press started a `48 s` figure-8. A second `F` press initiated the
-  return-to-start and landing sequence.
-- The path stayed close to its height target, recovered from one brief mocap
-  dropout, and ended with `return_home_landing_complete`, not a safety stop.
+The current manual-flight baseline is a compact, fast figure-8. The script is
+the source of truth for its active constants; at this update the relevant
+settings are:
+
+- `FIGURE8_NOMINAL_SPEED_SCALE = 4.20`, which is a `5.7 s` nominal path-clock
+  period from the `24 s` reference profile.
+- `FIGURE8_MAX_ANGLE_DEG = 23.0` during an airborne figure-8.
+- `FIGURE8_TARGET_VELOCITY_FEEDFORWARD = 0.70` so the X/Y controller follows a
+  moving target instead of reacting only after position error appears.
+- `FIGURE8_SPEEDUP_SCALE_PER_S = 0.70`; the path clock recovers more promptly
+  after a slow section.
+- Figure-8 altitude correction is assisted by tilt-thrust compensation, capped
+  at `2800 raw` in addition to the normal Z PID correction.
+
+These settings were progressed through a sequence of reviewed successful
+flights. The latest reviewed log,
+`flight_logs/mocap-assisted-figure8-20260721-091750.csv`, completed the
+figure-8 and entered normal return/descent with no stale-mocap or safety event.
+During its figure-8 phase it recorded:
+
+| Metric | Result |
+| --- | ---: |
+| Horizontal speed, median / p95 / peak | `1.97 / 2.66 / 3.12 m/s` |
+| Target error, median / p95 / peak | `0.50 / 0.71 / 0.86 m` |
+| Height above start, median / p95 | `0.96 / 1.06 m` |
+| Pitch cap reached | `6.1%` of figure-8 samples |
+| Tilt compensation at its cap | `8.7%` of figure-8 samples |
+
+The nominal speed is not a promise that every part of the path advances at
+that rate. The script slows the path clock when tracking error grows or when
+cage clearance narrows. In the latest run the path clock was below `3.0x` for
+about `85%` of figure-8 samples. This is intentional: tracking and cage margin
+win over requested speed. More speed should be validated from fresh logs, not
+assumed from a higher nominal constant.
+
+`R` ramps to ready thrust, `T` engages the 3 ft helper, and `F` starts the
+figure-8 once the vehicle is settled. A second `F` starts the controlled
+return-to-start and landing sequence.
 
 `FIGURE8_RADIUS_X_M` and `FIGURE8_RADIUS_Y_M` describe the requested path, not
 a guaranteed physical size. Before flight, the script reduces that request to
-fit the configured cage bounds and tracking reserve. The verified run planned
-and observed a horizontal path of about `5.4 m x 5.4 m`.
+fit the configured cage bounds and tracking reserve. The active fast-path
+planner uses the older raw-corner model and plans a compact horizontal route of
+about `5.4 m x 5.4 m`.
 
 ## Keyboard Controls
 
@@ -90,7 +121,7 @@ and observed a horizontal path of about `5.4 m x 5.4 m`.
 | `J` / `L` | Yaw-target trim. |
 | `C` | Clear attitude and yaw trims. |
 | Space | Immediate zero-thrust command. |
-| `Q` / Esc | Zero thrust and quit. |
+| `Q` / Esc | Request safety descent and exit after landing. |
 
 ## What the Script Uses From OptiTrack
 
@@ -119,6 +150,127 @@ experiment setting, not a claim that high-altitude flight is intrinsically safe.
 `MOCAP_STALE_RESUME_FIGURE8_S` permits brief coverage gaps to recover without
 pausing the figure-8 timeline. A prolonged stale interval levels the commands
 and eventually initiates the configured safety descent.
+
+The safety behavior is intentionally asymmetric:
+
+- `Space` is the operator's deliberate emergency zero-thrust command.
+- `Q` or Esc begins the same controlled safety-descent path used by automatic
+  guards, rather than issuing a hard cut.
+- Target-error, persistent cage-boundary, excessive climb-rate, stale-mocap,
+  and unexpected host-exit paths request a neutral, controlled descent when
+  fresh mocap is available. The cleanup path also attempts a neutral
+  mocap-guided descent when the host exits while thrust is nonzero.
+
+One hard-fall investigation in
+`mocap-assisted-figure8-20260720-092217.csv` found the script still logging
+roughly `34k..37k` commanded thrust while the measured height fell rapidly;
+the battery voltage simultaneously sagged as low as about `2.28 V`. That is
+consistent with a power/device-side interruption, not evidence of an
+intentional script zero-thrust command. This is an inference from the log, not
+a definitive hardware diagnosis. Battery enforcement is currently disabled in
+the script at the operator's request, so pack condition remains a manual
+preflight responsibility.
+
+To suppress derivative spikes from a bad mocap frame, measured velocities are
+plausibility-clamped at `5.0 m/s` horizontally and `2.0 m/s` vertically before
+they enter the filtered controller state. This does not replace stale-mocap
+handling; it protects the controller from a single fresh-but-jumpy sample.
+
+## Measured Horizontal Coverage
+
+The cage is rectangular and OptiTrack coverage is asymmetric. The numbers
+below are conservative **route caps** measured by the edge-probe workflow at
+about 3 ft above takeoff. They are not physical wall coordinates and are not a
+license to fly to the visual edge of the cage: obstacle clearance and tracking
+reserve are already folded into the values.
+
+| Relative direction | Current cap | Most useful evidence |
+| --- | ---: | --- |
+| Forward | `5.0 m` | `mocap-cage-edge-probe-20260717-094258.csv` reached `4.95 m` fresh. |
+| Backward | `4.5 m` | `mocap-cage-edge-probe-20260717-094258.csv` reached `4.44 m` fresh. |
+| Left | `3.0 m` | `mocap-cage-edge-probe-20260717-104848.csv` reached `2.86 m` and returned fresh. |
+| Right | `3.5 m` | `mocap-cage-edge-probe-20260717-104848.csv` reached `3.41 m` and returned fresh. |
+
+The right cap deliberately stops short of a previous rightward stale event at
+about `3.92 m`. The left cap also stays below earlier coverage trouble farther
+out. Use this asymmetric envelope when choosing path size or creating another
+path script; do not assume a symmetric square is safe just because the physical
+cage looks large enough.
+
+Because the cage is treated as rectangular, the four values also define an
+inferred, start-relative corner rectangle that can be evaluated for future
+figure-8 planning:
+
+```text
+front-left  = (+5.0 m, +3.0 m)
+front-right = (+5.0 m, -3.5 m)
+back-right  = (-4.5 m, -3.5 m)
+back-left   = (-4.5 m, +3.0 m)
+```
+
+The larger inferred rectangle was feasible in
+`flight_logs/mocap-assisted-figure8-20260720-144526.csv`: the planned path was
+`8.4 m x 5.4 m`, completed without a safety descent, and remained mocap-fresh.
+It is a successful feasibility result, not the active route configuration.
+
+For the current fast-path work, `mocap_manual_thrust_assisted_figure8.py`
+uses the older raw-Motive corner model to plan the compact route. The measured
+corridor remains active for safety checks and path-speed governing. These
+limits are triangulated from independent axis probes, not direct diagonal
+corner measurements, so retain stale-mocap and path-error safety guards.
+
+The successful 2026-07-17 lateral probe had no stale samples or safety descent,
+and maintained its outbound altitude within roughly `0.89..1.06 m` above
+takeoff. Its return-to-center behavior is intentionally sharper than the
+outbound leg, with brief lateral speed estimates near `3 m/s`. That profile is
+accepted only as the presently tested edge-probe return; new paths should keep
+their own normal path motion slower and should not increase the return speed
+without reviewing a new log.
+
+### Corner Survey Follow-up
+
+`mocap_cage_corner_probe.py` is a separate corner-coverage survey tool built
+from the successful edge-probe control stack. After the normal `R`, low-hover,
+and settled `T` sequence, `F` runs these center-origin routes:
+
+```text
+front-left -> front-right -> back-left -> back-right
+```
+
+For each route it travels at the proven speed to the applicable known
+forward/backward corridor cap, then approaches the calculated perpendicular
+limit. It holds there for `1.5 s` of settled fresh mocap, records the measured
+local point, and returns to center before the next route. Brief mocap gaps
+pause and then resume the same stage; only a continuous `3 s` stale interval
+records the last fresh local coordinate as a coverage boundary and uses the
+existing no-blind-return safety behavior. The script never deliberately flies
+beyond the calculated rectangle. Review its CSV and path image before copying
+any measured corner into a flight-path configuration.
+
+The first front-left corner attempt on 2026-07-20 found a sustained OptiTrack
+dropout at about `4.72 m` forward and `2.15 m` left. The corner-probe script
+therefore temporarily uses a front-left lateral limit of `1.85 m` while keeping
+the temporary one-foot forward inset (`4.6952 m` forward). This is a
+corner-specific optical-coverage margin, not a revised physical cage size.
+
+The following run, `mocap-cage-corner-probe-20260720-103251.csv`, reached and
+held the front-left point for `1.5 s` of fresh mocap near `4.73 m` forward and
+`1.80 m` left, then returned normally. Its front-right route went continuously
+stale near `4.64 m` forward and `0.69 m` right, before it reached the inferred
+rectangle intersection. The script now uses a provisional front-right
+rightward limit of `0.40 m`, retaining roughly `0.29 m` of observed coverage
+margin for the next multi-corner survey. This difference is optical coverage
+at a diagonal, not evidence that the independent forward or right corridor is
+wrong.
+
+The later receive-only hand survey `mocap-corner-coverage.csv` directly
+measured all four diagonal boundaries at one stable chair-height plane. The
+last fresh local points before sustained dropout were front-right
+`(+3.790, -3.072)`, back-right `(-3.687, -2.829)`, back-left
+`(-3.967, +2.496)`, and front-left `(+3.598, +2.538)` metres. These are the
+best direct optical-coverage measurements so far, but they are not automatic
+flight waypoints: reserve at least `0.30 m` radially and validate at the
+actual flight height and yaw before incorporating them into a path.
 
 ## Height Coverage Finding
 

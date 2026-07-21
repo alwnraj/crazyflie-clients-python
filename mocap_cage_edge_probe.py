@@ -21,10 +21,12 @@ Recommended first flights:
 3. Press T to climb/hold near 3 ft, then wait for the READY indication.
 4. Use A/D, W/S, and J/L only as small trims while learning the response.
 5. Do not press F until it can hold near the start X/Y for several seconds.
-6. Press F to probe forward, backward, left, and right from the start point.
+6. Press F to probe the configured directions from the start point. The
+   current battery-saving configuration probes left, then right.
    Press F again to stop, return to the start point, and land.
 7. During 3ft hold or the probe, Up/Down nudge the height target.
-8. Use PgDn for normal slow descent. Space/Q are emergency cuts.
+8. Use PgDn for normal slow descent. Q/Esc request a safety descent; Space
+   immediately cuts motors.
 """
 
 import csv
@@ -91,6 +93,10 @@ ENFORCE_HEIGHT_LIMITS = False
 MAX_CLIMB_RATE_M_S = 0.60
 SAFETY_THRUST_RAW = 35000
 ESTIMATOR_HEIGHT_SAFETY_ONLY_WHEN_MOCAP_STALE = True
+# OptiTrack is the probe's authoritative position source. The Crazyflie
+# estimator stream is logged for diagnostics, but its occasional delayed
+# packets must not abort a probe while mocap remains fresh.
+ENFORCE_ESTIMATOR_STALE_ABORT = False
 MOCAP_STALE_TIMEOUT_S = 0.30
 MOCAP_STALE_GRACE_S = 3.00
 MOCAP_STALE_COAST_S = 0.00
@@ -118,6 +124,11 @@ THRUST_RAMP_UP_RAW_PER_S = 2500.0
 THRUST_RAMP_DOWN_RAW_PER_S = 2500.0
 DESCENT_RAMP_RAW_PER_S = 1400.0
 SAFETY_DESCENT_RAMP_RAW_PER_S = 700.0
+# If the last fresh OptiTrack pose is already near the floor, waiting through
+# the normal stale-confirmation window at hover thrust can cause a bounce or
+# slide. Level immediately and use this still-ramped landing rate instead.
+STALE_NEAR_GROUND_HEIGHT_M = 0.15
+STALE_NEAR_GROUND_DESCENT_RAMP_RAW_PER_S = 2500.0
 CONTROLLED_SAFETY_DESCENT_RATE_M_S = 0.20
 CONTROLLED_SAFETY_DESCENT_MIN_HEIGHT_M = 0.12
 CONTROLLED_SAFETY_DESCENT_BASE_THRUST_RAW = 32000
@@ -135,8 +146,8 @@ PREFIGURE8_HEIGHT_HOLD_ENABLED = True
 PREFIGURE8_HEIGHT_TARGET_M = 0.9144
 PREFIGURE8_HEIGHT_MAX_TARGET_M = 1.20
 PREFIGURE8_HEIGHT_MIN_TARGET_M = 0.10
-PREFIGURE8_HEIGHT_READY_ERROR_M = 0.12
-PREFIGURE8_HEIGHT_READY_VERTICAL_SPEED_M_S = 0.08
+PREFIGURE8_HEIGHT_READY_ERROR_M = 0.06
+PREFIGURE8_HEIGHT_READY_VERTICAL_SPEED_M_S = 0.04
 PREFIGURE8_BASE_THRUST_RAW = 34000
 PREFIGURE8_ALTITUDE_KP_RAW_PER_M = 5200.0
 PREFIGURE8_ALTITUDE_KI_RAW_PER_M_S = 650.0
@@ -226,13 +237,26 @@ FIGURE8_ALTITUDE_CORRECTION_LIMIT_RAW = 1800.0
 FIGURE8_ALTITUDE_CORRECTION_SLEW_RAW_PER_S = 3000.0
 
 # Cage-edge probe. Directions are relative to the body heading captured when
-# F is pressed: forward, backward, left, right. The target advances slowly
-# and is never more than PROBE_TARGET_LOOKAHEAD_M ahead of the tracked drone.
-PROBE_TARGET_SPEED_M_S = 0.25
+# F is pressed: forward, backward, left, right. Each leg first travels through
+# the operator-confirmed safe range, then extends more cautiously until mocap
+# becomes stale. Targets are never more than PROBE_TARGET_LOOKAHEAD_M ahead of
+# the tracked drone.
+PROBE_SAFE_DISTANCE_M = (3.00, 3.00, 2.00, 2.00)
+# Forward/backward coverage is now well characterized, so run those legs at
+# twice the current rate. Keep the less-certain left/right legs at the prior
+# cautious rate. Values are ordered forward, backward, left, right.
+# The live-mocap lookahead below still limits how far ahead a target can move.
+PROBE_SAFE_SPEED_M_S = (0.80, 0.80, 0.40, 0.40)
+PROBE_EDGE_SPEED_M_S = (0.40, 0.40, 0.20, 0.20)
 PROBE_TARGET_LOOKAHEAD_M = 0.30
-# The operator reported about 2m clear in every direction. Keep 0.2m inside
-# that known-clear region rather than repeating the first run's 4.9m leg.
-PROBE_ABSOLUTE_MAX_DISTANCE_M = 1.80
+# Last-resort finite guards by leg (forward, backward, left, right). The left
+# tracker repeatedly stopped near 3.28m, so cap that leg at 3.00m. The latest
+# right pass lost tracking near 3.92m (local y about -4.00m), so cap right at
+# 3.50m. Both lateral caps return before the observed loss points.
+PROBE_MAX_DISTANCE_M = (5.00, 4.50, 3.00, 3.50)
+# Active legs for this run. Forward/backward have already reached their caps,
+# so preserve them in the configuration but skip them to save battery.
+PROBE_ACTIVE_LEG_INDICES = (2, 3)
 PROBE_CENTER_TOLERANCE_M = 0.15
 PROBE_CENTER_SPEED_M_S = 0.18
 PROBE_MAX_ANGLE_DEG = 12.0
@@ -422,6 +446,10 @@ class CsvLogger:
         "probe_leg_index",
         "probe_direction",
         "probe_heading_deg",
+        "probe_safe_distance_m",
+        "probe_max_distance_m",
+        "probe_mode",
+        "probe_target_speed_m_s",
         "probe_target_distance_m",
         "probe_projected_distance_m",
         "probe_confirmed_border",
@@ -951,7 +979,7 @@ def draw(stdscr, state):
         "Controls: R ready | T 3ft hold | Up/Down thrust or Z target | PgDn descent",
     )
     add_line(stdscr, 3, 0, "Trim: W/S pitch +/- | A/D roll -/+ | J/L yaw target -/+ | C clear")
-    add_line(stdscr, 4, 0, "F start/stop edge probe | H lock X/Y | Space cut | Q/Esc cut+quit")
+    add_line(stdscr, 4, 0, "F start/stop edge probe | H lock X/Y | Space cut | Q safety-land")
     add_line(stdscr, 5, 0, f"Phase: {state['phase']} | {state['message']}")
     add_line(
         stdscr,
@@ -1028,7 +1056,7 @@ def draw(stdscr, state):
         16,
         0,
         f"Probe: {'ON' if state['probe_active'] else ('RETURN' if state['probe_returning'] else 'off')} "
-        f"| {state['probe_direction']} | target={state['probe_target_distance']:.2f}m "
+        f"| {state['probe_direction']} {state['probe_mode']} | target={state['probe_target_distance']:.2f}m "
         f"| projected={state['probe_projected_distance']:.2f}m",
     )
     add_line(
@@ -1036,8 +1064,8 @@ def draw(stdscr, state):
         17,
         0,
         f"Tracking border: {state['probe_border']} "
-        f"| stale confirmation={PROBE_STALE_BORDER_S:.1f}s "
-        f"| max leg={PROBE_ABSOLUTE_MAX_DISTANCE_M:.1f}m",
+        f"| safe={state['probe_safe_distance']:.1f}m, stale confirmation={PROBE_STALE_BORDER_S:.1f}s "
+        f"| max leg={state['probe_max_distance']:.1f}m",
     )
     add_line(
         stdscr,
@@ -1056,7 +1084,7 @@ def draw(stdscr, state):
         f"3ft ready: {'YES' if state['prefigure8_height_ready'] else 'no'} "
         f"| hold={'ON' if state['prefigure8_height_hold_active'] else 'off'}",
     )
-    add_line(stdscr, 21, 0, "Normal landing: PgDn. Emergency: Space or Q.")
+    add_line(stdscr, 21, 0, "Normal landing: PgDn. Safety: Q/Esc. Emergency cut: Space.")
     stdscr.refresh()
 
 
@@ -1092,7 +1120,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
     figure8_target_height = None
     probe_active = False
     probe_returning = False
-    probe_leg_index = 0
+    probe_sequence_index = 0
+    probe_leg_index = PROBE_ACTIVE_LEG_INDICES[probe_sequence_index]
     probe_heading_rad = yaw_from_quat(start_quat)
     probe_target_distance = 0.0
     probe_last_fresh_position = start_position
@@ -1270,6 +1299,14 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     f"Mocap stale with thrust > {SAFETY_THRUST_RAW}; "
                     "forcing slow descent."
                 )
+            if current_height <= STALE_NEAR_GROUND_HEIGHT_M:
+                start_safety_descent(
+                    f"mocap stale near ground ({current_height:.2f}m)"
+                )
+                message = (
+                    f"Mocap stale near ground ({current_height:.2f}m); "
+                    "leveling and landing."
+                )
             if SHUTDOWN_ON_STALE_MOCAP and stale_for > MOCAP_STALE_GRACE_S:
                 start_safety_descent(
                     f"mocap stale for {stale_for:.2f}s"
@@ -1296,9 +1333,22 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     probe_active = True
                     probe_returning = True
                     probe_target_distance = 0.0
+                    # Stale handling deliberately clears altitude control
+                    # while tracking is unavailable. Restore the pre-stale
+                    # probe height before flying the return leg so raw base
+                    # thrust cannot let the drone sink on the way home.
+                    if stale_saved_figure8_target_height is not None:
+                        figure8_target_height = clamp_figure8_height_target(
+                            stale_saved_figure8_target_height
+                        )
+                    else:
+                        figure8_target_height = clamp_figure8_height_target(
+                            current_height
+                        )
                     message = (
                         f"Mocap reacquired after {stale_for:.1f}s; returning "
-                        f"from {PROBE_DIRECTION_NAMES[probe_leg_index]} to center."
+                        f"from {PROBE_DIRECTION_NAMES[probe_leg_index]} to center "
+                        f"at {figure8_target_height:.2f}m."
                     )
                 else:
                     message = (
@@ -1360,26 +1410,22 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         key_code = "" if key == -1 else key
         key_name = describe_key(key)
         if key in (ord("q"), ord("Q"), 27):
-            stop_reason = "operator_exit"
-            send_zero_thrust(cf, count=EMERGENCY_ZERO_THRUST_PACKETS)
-            break
-        if key == ord(" "):
-            stop_reason = "operator_cut"
+            if thrust <= MIN_THRUST:
+                stop_reason = "operator_exit"
+                break
+            start_safety_descent("operator requested exit")
+            message = "Operator exit requested; safety descent is ramping down."
+        elif key == ord(" "):
+            stop_reason = "operator_emergency_cut"
             thrust = 0
             target_thrust = 0
-            descent_active = False
-            safety_descent_active = False
-            probe_active = False
-            probe_returning = False
-            probe_stale_pending = False
-            figure8_target_height = None
-            prefigure8_height_hold_active = False
-            altitude_hold_correction = 0.0
-            altitude_integral = 0.0
-            return_land_active = False
-            return_land_descent_started = False
-            send_zero_thrust(cf, count=EMERGENCY_ZERO_THRUST_PACKETS, send_stop=False)
-            message = "Emergency zero thrust sent immediately."
+            send_zero_thrust(
+                cf,
+                count=EMERGENCY_ZERO_THRUST_PACKETS,
+                send_stop=False,
+            )
+            message = "Emergency motor cut sent."
+            break
         elif key == curses.KEY_UP:
             if safety_descent_active:
                 message = "Safety descent active; thrust increase ignored."
@@ -1582,7 +1628,20 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             else:
                 error_to_hold = math.hypot(position[0] - hold_x, position[1] - hold_y)
                 horizontal_start_speed = math.hypot(velocity_x, velocity_y)
-                if abs(velocity_z) > FIGURE8_MAX_START_VERTICAL_SPEED_M_S:
+                preprobe_height_error = prefigure8_target_height - current_height
+                if not prefigure8_height_hold_active:
+                    message = "Edge probe rejected: press T and wait for the settled 3ft hold."
+                elif abs(preprobe_height_error) > PREFIGURE8_HEIGHT_READY_ERROR_M:
+                    message = (
+                        f"Edge probe rejected: height error {preprobe_height_error:+.2f}m; "
+                        "wait for the 3ft hold."
+                    )
+                elif abs(velocity_z) > PREFIGURE8_HEIGHT_READY_VERTICAL_SPEED_M_S:
+                    message = (
+                        f"Edge probe rejected: vertical speed {velocity_z:+.2f}m/s; "
+                        "wait for height to settle."
+                    )
+                elif abs(velocity_z) > FIGURE8_MAX_START_VERTICAL_SPEED_M_S:
                     message = (
                         f"Edge probe rejected: vertical speed {velocity_z:+.2f}m/s "
                         f"exceeds {FIGURE8_MAX_START_VERTICAL_SPEED_M_S:.2f}m/s."
@@ -1603,7 +1662,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     hold_target_frozen = True
                     probe_active = True
                     probe_returning = False
-                    probe_leg_index = 0
+                    probe_sequence_index = 0
+                    probe_leg_index = PROBE_ACTIVE_LEG_INDICES[probe_sequence_index]
                     # The figure-8 controller may apply a 180-degree control
                     # frame correction. That is useful for X/Y stabilization,
                     # but it inverted the human-facing "forward" probe label
@@ -1623,8 +1683,12 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     return_land_descent_started = False
                     integral_x = 0.0
                     integral_y = 0.0
+                    active_probe_names = ", then ".join(
+                        PROBE_DIRECTION_NAMES[index]
+                        for index in PROBE_ACTIVE_LEG_INDICES
+                    )
                     message = (
-                        "Edge probe active: forward first, then backward, left, right. "
+                        f"Edge probe active: {active_probe_names}. "
                         f"Z hold target {figure8_target_height:.2f}m."
                     )
 
@@ -1664,6 +1728,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             descent_active = True
             message = f"Safety descent: {safety_descent_reason}."
 
+        descent_ramp_rate = THRUST_RAMP_DOWN_RAW_PER_S
         if descent_active:
             if controlled_safety_descent_active:
                 target_thrust = max(
@@ -1672,37 +1737,29 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 )
             else:
                 descent_rate = (
-                    SAFETY_DESCENT_RAMP_RAW_PER_S
-                    if safety_descent_active
-                    else DESCENT_RAMP_RAW_PER_S
+                    STALE_NEAR_GROUND_DESCENT_RAMP_RAW_PER_S
+                    if (
+                        safety_descent_active
+                        and mocap_stale
+                        and current_height <= STALE_NEAR_GROUND_HEIGHT_M
+                    )
+                    else (
+                        SAFETY_DESCENT_RAMP_RAW_PER_S
+                        if safety_descent_active
+                        else DESCENT_RAMP_RAW_PER_S
+                    )
                 )
+                descent_ramp_rate = descent_rate
                 target_thrust = min(target_thrust, thrust)
                 target_thrust = clamp(
                     target_thrust - descent_rate * dt,
                     MIN_THRUST,
                     MAX_MANUAL_THRUST,
                 )
-            if target_thrust <= MIN_THRUST:
-                descent_active = False
-                if safety_descent_active:
-                    stop_reason = safety_descent_reason or "safety_descent_complete"
-                    target_thrust = 0
-                    thrust = 0
-                    exit_after_log = True
-                    message = "Safety descent reached zero thrust."
-                elif return_land_active:
-                    stop_reason = "return_home_landing_complete"
-                    target_thrust = 0
-                    thrust = 0
-                    exit_after_log = True
-                    message = "Return landing reached zero thrust."
-                else:
-                    message = "Slow descent reached zero thrust."
-
         target_thrust = clamp(target_thrust, MIN_THRUST, MAX_MANUAL_THRUST)
         thrust_down_rate = (
-            SAFETY_DESCENT_RAMP_RAW_PER_S
-            if safety_descent_active
+            descent_ramp_rate
+            if descent_active
             else THRUST_RAMP_DOWN_RAW_PER_S
         )
         thrust = slew_toward(
@@ -1713,6 +1770,21 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             dt,
         )
         thrust = int(clamp(thrust, MIN_THRUST, MAX_MANUAL_THRUST))
+
+        # A landing completes only once the *sent* thrust has reached zero.
+        # Do not replace a still-positive ramped command with a hard cut.
+        if descent_active and target_thrust <= MIN_THRUST and thrust <= MIN_THRUST:
+            descent_active = False
+            if safety_descent_active:
+                stop_reason = safety_descent_reason or "safety_descent_complete"
+                exit_after_log = True
+                message = "Safety descent reached zero thrust by ramp."
+            elif return_land_active:
+                stop_reason = "return_home_landing_complete"
+                exit_after_log = True
+                message = "Return landing reached zero thrust by ramp."
+            else:
+                message = "Slow descent reached zero thrust by ramp."
 
         height = current_height
         height_assist_mode = ""
@@ -1809,7 +1881,11 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
 
         battery_v, estimate_z, estimator_age = telemetry.snapshot()
         estimator_height = estimate_z - start_estimate_z
-        if command_thrust > SAFETY_THRUST_RAW and estimator_age > ESTIMATOR_STALE_TIMEOUT_S:
+        if (
+            ENFORCE_ESTIMATOR_STALE_ABORT
+            and command_thrust > SAFETY_THRUST_RAW
+            and estimator_age > ESTIMATOR_STALE_TIMEOUT_S
+        ):
             start_safety_descent(
                 f"Estimator height telemetry stale for {estimator_age:.2f}s "
                 f"while thrust is {command_thrust}"
@@ -1912,6 +1988,10 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             figure8_path_elapsed = 0.0
 
         probe_direction_name = PROBE_DIRECTION_NAMES[probe_leg_index]
+        probe_safe_distance = PROBE_SAFE_DISTANCE_M[probe_leg_index]
+        probe_max_distance = PROBE_MAX_DISTANCE_M[probe_leg_index]
+        probe_safe_speed = PROBE_SAFE_SPEED_M_S[probe_leg_index]
+        probe_edge_speed = PROBE_EDGE_SPEED_M_S[probe_leg_index]
         probe_direction_x, probe_direction_y = probe_direction_world(
             probe_heading_rad,
             probe_leg_index,
@@ -1920,21 +2000,42 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             (position[0] - hold_x) * probe_direction_x
             + (position[1] - hold_y) * probe_direction_y
         )
+        probe_testing_edge = probe_target_distance >= probe_safe_distance
+        probe_target_speed = (
+            probe_edge_speed
+            if probe_testing_edge
+            else probe_safe_speed
+        )
         if probe_active and not probe_returning and not mocap_stale:
             measured_ahead_limit = max(0.0, probe_projected_distance) + PROBE_TARGET_LOOKAHEAD_M
+            previous_target_distance = probe_target_distance
             probe_target_distance = min(
-                PROBE_ABSOLUTE_MAX_DISTANCE_M,
-                probe_target_distance + PROBE_TARGET_SPEED_M_S * dt,
+                probe_max_distance,
+                probe_target_distance + probe_target_speed * dt,
                 measured_ahead_limit,
             )
             if (
-                probe_target_distance >= PROBE_ABSOLUTE_MAX_DISTANCE_M
-                and probe_projected_distance >= PROBE_ABSOLUTE_MAX_DISTANCE_M - PROBE_CENTER_TOLERANCE_M
+                previous_target_distance < probe_safe_distance
+                and probe_target_distance >= probe_safe_distance
+            ):
+                message = (
+                    f"{probe_direction_name.title()} safe range {probe_safe_distance:.1f}m "
+                    f"reached; extending at {probe_edge_speed:.2f}m/s for mocap coverage."
+                )
+            probe_testing_edge = probe_target_distance >= probe_safe_distance
+            probe_target_speed = (
+                probe_edge_speed
+                if probe_testing_edge
+                else probe_safe_speed
+            )
+            if (
+                probe_target_distance >= probe_max_distance
+                and probe_projected_distance >= probe_max_distance - PROBE_CENTER_TOLERANCE_M
             ):
                 probe_returning = True
                 message = (
                     f"{probe_direction_name.title()} reached the "
-                    f"{PROBE_ABSOLUTE_MAX_DISTANCE_M:.1f}m backstop; returning to center."
+                    f"{probe_max_distance:.1f}m hard backstop; returning to center."
                 )
 
         if safety_descent_active:
@@ -2020,8 +2121,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             and return_home_error <= PROBE_CENTER_TOLERANCE_M
             and speed <= PROBE_CENTER_SPEED_M_S
         ):
-            if probe_leg_index + 1 < len(PROBE_DIRECTION_NAMES):
-                probe_leg_index += 1
+            if probe_sequence_index + 1 < len(PROBE_ACTIVE_LEG_INDICES):
+                probe_sequence_index += 1
+                probe_leg_index = PROBE_ACTIVE_LEG_INDICES[probe_sequence_index]
                 probe_returning = False
                 probe_target_distance = 0.0
                 integral_x = 0.0
@@ -2033,7 +2135,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 probe_active = False
                 return_land_active = True
                 return_land_descent_started = False
-                message = "All four probe legs complete; landing at center."
+                message = "All active probe legs complete; landing at center."
         if (
             return_land_active
             and not descent_active
@@ -2317,6 +2419,10 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "probe_leg_index": probe_leg_index,
                 "probe_direction": probe_direction_name,
                 "probe_heading_deg": math.degrees(probe_heading_rad),
+                "probe_safe_distance_m": probe_safe_distance,
+                "probe_max_distance_m": probe_max_distance,
+                "probe_mode": "edge-test" if probe_testing_edge else "safe-range",
+                "probe_target_speed_m_s": probe_target_speed,
                 "probe_target_distance_m": probe_target_distance,
                 "probe_projected_distance_m": probe_projected_distance,
                 "probe_confirmed_border": int(
@@ -2428,6 +2534,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "probe_active": probe_active,
                 "probe_returning": probe_returning,
                 "probe_direction": probe_direction_name,
+                "probe_safe_distance": probe_safe_distance,
+                "probe_max_distance": probe_max_distance,
+                "probe_mode": "edge-test" if probe_testing_edge else "safe-range",
                 "probe_target_distance": probe_target_distance,
                 "probe_projected_distance": probe_projected_distance,
                 "probe_border": (
@@ -2481,7 +2590,6 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             last_draw_at = now
 
         if exit_after_log:
-            send_zero_thrust(cf, count=EMERGENCY_ZERO_THRUST_PACKETS)
             break
 
         time.sleep(COMMAND_PERIOD_S)
@@ -2540,7 +2648,7 @@ def main():
     )
     print(
         f"Hard stops: climb <= {MAX_CLIMB_RATE_M_S:.2f}m/s, "
-        f"estimator age <= {ESTIMATOR_STALE_TIMEOUT_S:.2f}s above thrust {SAFETY_THRUST_RAW}, "
+        f"estimator-stale abort={ENFORCE_ESTIMATOR_STALE_ABORT}, "
         f"stale mocap shutdown={SHUTDOWN_ON_STALE_MOCAP}, "
         f"grace={MOCAP_STALE_GRACE_S:.2f}s, coast={MOCAP_STALE_COAST_S:.2f}s"
     )
@@ -2557,14 +2665,17 @@ def main():
         f"Keyboard trim: roll/pitch step={ROLL_TRIM_STEP_DEG:.1f}/{PITCH_TRIM_STEP_DEG:.1f} deg, "
         f"max=+/-{MAX_ROLL_PITCH_TRIM_DEG:.1f} deg, yaw step={YAW_TARGET_STEP_DEG:.1f} deg"
     )
+    active_probe_names = [
+        PROBE_DIRECTION_NAMES[index] for index in PROBE_ACTIVE_LEG_INDICES
+    ]
+    print(f"Probe plan: center -> {' -> center -> '.join(active_probe_names)} -> center")
     print(
-        f"Probe plan: center -> forward -> center -> backward -> center -> "
-        "left -> center -> right -> center"
-    )
-    print(
-        f"Probe: {PROBE_TARGET_SPEED_M_S:.2f}m/s target speed, "
+        f"Probe safe ranges: forward/backward {PROBE_SAFE_DISTANCE_M[0]:.1f}m, "
+        f"left/right {PROBE_SAFE_DISTANCE_M[2]:.1f}m; "
+        f"safe F/B={PROBE_SAFE_SPEED_M_S[0]:.2f}m/s, L/R={PROBE_SAFE_SPEED_M_S[2]:.2f}m/s; "
+        f"edge F/B={PROBE_EDGE_SPEED_M_S[0]:.2f}m/s, L/R={PROBE_EDGE_SPEED_M_S[2]:.2f}m/s; "
         f"{PROBE_TARGET_LOOKAHEAD_M:.2f}m lookahead, "
-        f"{PROBE_ABSOLUTE_MAX_DISTANCE_M:.1f}m hard backstop, "
+        f"max legs F/B/L/R={PROBE_MAX_DISTANCE_M}, "
         f"{PROBE_STALE_BORDER_S:.1f}s stale confirmation"
     )
     print(
@@ -2644,7 +2755,12 @@ def main():
             )
 
             print("\n[INFO] Flight loop ended.")
-            for direction, result in zip(PROBE_DIRECTION_NAMES, probe_results):
+            for index, (direction, result) in enumerate(
+                zip(PROBE_DIRECTION_NAMES, probe_results)
+            ):
+                if index not in PROBE_ACTIVE_LEG_INDICES:
+                    print(f"[PROBE] {direction}: skipped in this lateral-only run.")
+                    continue
                 if result is None:
                     print(f"[PROBE] {direction}: no confirmed stale border.")
                 else:

@@ -11,7 +11,7 @@ commands:
 - yawrate to hold the starting heading
 - optional figure-8-only altitude hold correction on top of pilot thrust
 - optional keyboard attitude trims on top of the mocap assist
-- stale-mocap forced descent/abort behavior, plus safety cuts if the drone
+- stale-mocap forced descent/abort behavior, plus safety descents if the drone
   leaves the tight flight box, climbs too fast, or height gets too high
 
 Recommended first flights:
@@ -24,7 +24,21 @@ Recommended first flights:
 6. Press F to start the figure-8. Press F again to return to the figure-8
    start point and land.
 7. During 3ft hold or figure-8, Up/Down nudge the height target.
-8. Use PgDn for normal slow descent. Space/Q are emergency cuts.
+8. Use PgDn for normal slow descent. Space is an emergency cut; Q requests
+   a safety descent.
+
+Control-loop map:
+
+1. Mocap supplies local X/Y/Z and yaw. The pilot supplies the baseline thrust.
+2. The controller turns X/Y position and velocity error into body-frame
+   roll/pitch, and holds yaw with a yaw-rate command.
+3. In figure-8 mode, a target-velocity feedforward term helps the drone follow
+   the moving path. The path clock slows for tracking error or cage clearance;
+   it never trades those protections for a requested speed.
+4. Z assistance adds a limited correction and bank-angle thrust support on top
+   of baseline thrust. It is active only with fresh mocap.
+5. Automatic problems request a controlled safety descent. Space is reserved
+   for the deliberate, immediate zero-thrust emergency command.
 """
 
 import csv
@@ -57,8 +71,10 @@ URI = "radio://0/80/2M"
 MOCAP_HOST = "192.168.1.42:3883"
 RIGID_BODY_NAME = "crazyflie_21"
 
-# Cage corners from Motive/VRPN raw coordinates. The flight controller below
-# operates in the transformed local frame, so these are transformed before use.
+# Historical cage corners from Motive/VRPN raw coordinates. The flight
+# controller operates in the transformed local frame. These corners size the
+# active compact figure-8; the measured corridor below remains active for
+# safety checks and path-speed governing.
 RAW_CAGE_CORNER_POINTS = [
     (-1.027, 1.015, 0.046),   # bottom right
     (-1.020, -0.999, 0.046),  # top right
@@ -69,6 +85,20 @@ CAGE_WALL_MARGIN_M = 0.12
 FIGURE8_TRACKING_RESERVE_M = 0.18
 CAGE_LIMIT_EXPANSION_M = 2.00
 ENFORCE_CAGE_BOUNDS = True
+# Keep the hard cage check from tripping on sub-centimeter mocap noise or
+# floating-point rounding at an otherwise valid boundary crossing.
+CAGE_VIOLATION_TOLERANCE_M = 0.01
+# A cage crossing must persist before it starts the existing safety descent.
+CAGE_VIOLATION_GRACE_S = 0.20
+# Measured 2026-07-17 flight corridors at about 3 ft above takeoff. These are
+# relative to the locked start point in the local frame: +X forward, -X back,
+# +Y left, and -Y right. They define the start-relative rectangular model used
+# by active safety and speed governing. The larger corridor plan is documented
+# as feasible, but is not the active figure-8 planner.
+MEASURED_CORRIDOR_FORWARD_M = 5.00
+MEASURED_CORRIDOR_BACKWARD_M = 4.50
+MEASURED_CORRIDOR_LEFT_M = 3.00
+MEASURED_CORRIDOR_RIGHT_M = 3.50
 
 # Keep this smaller than the full cage until mocap coverage is reliable.
 # These limits are relative to the takeoff/start position.
@@ -101,6 +131,10 @@ MOCAP_STALE_FORCE_DESCENT = True
 MOCAP_RELOCK_AFTER_STALE_S = 0.45
 STALE_LOG_PERIOD_S = 0.10
 ESTIMATOR_STALE_TIMEOUT_S = 0.50
+# A single mocap position jump can otherwise become a large derivative kick.
+# This is deliberately well above the commanded figure-8 speed.
+MOCAP_MAX_HORIZONTAL_SPEED_M_S = 5.00
+MOCAP_MAX_VERTICAL_SPEED_M_S = 2.00
 
 # Manual thrust controls. Crazyflie raw thrust is 0..65535.
 # The ready key (R) requests a near-liftoff target, but the actual sent thrust
@@ -124,6 +158,10 @@ CONTROLLED_SAFETY_ALTITUDE_KI_RAW_PER_M_S = 500.0
 CONTROLLED_SAFETY_ALTITUDE_KD_RAW_PER_M_S = 4200.0
 CONTROLLED_SAFETY_ALTITUDE_CORRECTION_LIMIT_RAW = 1800.0
 CONTROLLED_SAFETY_ALTITUDE_CORRECTION_SLEW_RAW_PER_S = 2400.0
+SHUTDOWN_SAFETY_DESCENT_RATE_M_S = 0.20
+SHUTDOWN_SAFETY_DESCENT_BASE_RAMP_RAW_PER_S = 700.0
+SHUTDOWN_SAFETY_DESCENT_MIN_THRUST_RAW = 28000
+SHUTDOWN_SAFETY_DESCENT_GROUND_HEIGHT_M = 0.08
 
 # Pre-figure-8 height helper. Press T after takeoff to climb/hold about 3 ft
 # before pressing F. It uses mocap height and is disabled during stale mocap.
@@ -156,10 +194,12 @@ AUTO_FLIP_BODY_YAW_THRESHOLD_DEG = 90.0
 YAW_COMMAND_SIGN = -1.0
 
 # PD + small leaky integral. Kp responds to position error, Kd damps velocity,
+# and follows a portion of a moving figure-8 target's requested velocity.
 # Ki cancels small bias after it is already near hover.
 KP_XY = 14.0
 KD_XY = 7.0
 KI_XY = 1.0
+FIGURE8_TARGET_VELOCITY_FEEDFORWARD = 0.70
 INTEGRAL_LEAK_PER_S = 0.20
 INTEGRAL_MAX_ERROR_S = 0.20
 
@@ -172,7 +212,7 @@ TAKEOFF_XY_ASSIST_FULL_HEIGHT_M = 0.04
 TAKEOFF_XY_ASSIST_START_THRUST_RAW = 24000
 TAKEOFF_XY_ASSIST_FULL_THRUST_RAW = 32000
 MAX_ANGLE_DEG = 12.0
-FIGURE8_MAX_ANGLE_DEG = 16.0
+FIGURE8_MAX_ANGLE_DEG = 23.0
 AGGRESSIVE_ERROR_M = 0.08
 AGGRESSIVE_GAIN_SCALE = 1.7
 
@@ -195,10 +235,32 @@ GROUND_MAX_YAWRATE_DEG_S = 12.0
 # Figure-8 target. This is a standing two-lobe path:
 # top ellipse from center back to center, then bottom ellipse back to center.
 # radius_x is total path width, radius_y is half of the total path height.
+#
+# Fast-path tuning order: inspect a completed CSV first, then raise the nominal
+# path-clock speed together with only the authority the log shows is saturated.
+# The error/cage governor below is intentionally allowed to slow the path; do
+# not loosen it merely to make the nominal number appear faster.
 FIGURE8_RADIUS_X_M = 11.60
 FIGURE8_RADIUS_Y_M = 3.60
 FIGURE8_PERIOD_S = 24.0
 FIGURE8_STARTUP_RAMP_S = 8.0
+# The path normally advances faster than the 24 s reference profile.
+# When tracking error grows, the governor slows only the path clock; the
+# proven X/Y controller, attitude limits, and all safety limits stay intact.
+FIGURE8_NOMINAL_SPEED_SCALE = 4.20
+FIGURE8_MIN_SPEED_SCALE = 0.60
+FIGURE8_SLOWDOWN_START_ERROR_M = 0.30
+FIGURE8_SLOWDOWN_FULL_ERROR_M = 0.75
+# Recover promptly after the error governor releases the path clock; slowdown
+# remains deliberately faster so tracking error still wins over path speed.
+FIGURE8_SPEEDUP_SCALE_PER_S = 0.70
+FIGURE8_SLOWDOWN_SCALE_PER_S = 2.00
+# Slow the target before tracking lag carries the aircraft into a cage wall.
+# This is an additional path-clock governor; it does not relax the hard cage
+# safety boundary or the planned figure-8 reserve.
+FIGURE8_CAGE_SLOWDOWN_START_M = 0.30
+FIGURE8_CAGE_SLOWDOWN_FULL_M = 0.10
+FIGURE8_CAGE_MIN_SPEED_SCALE = 0.75
 FIGURE8_MAX_WIDTH_TO_HEIGHT_RATIO = 2.00
 FIGURE8_MIN_RADIUS_X_M = 0.20
 FIGURE8_MIN_RADIUS_Y_M = 0.12
@@ -216,10 +278,16 @@ FIGURE8_ALTITUDE_MIN_TARGET_M = 0.04
 FIGURE8_ALTITUDE_MAX_TARGET_M = 1.20
 FIGURE8_ALTITUDE_KP_RAW_PER_M = 6500.0
 FIGURE8_ALTITUDE_KI_RAW_PER_M_S = 900.0
-FIGURE8_ALTITUDE_KD_RAW_PER_M_S = 3500.0
+FIGURE8_ALTITUDE_KD_RAW_PER_M_S = 4000.0
 FIGURE8_ALTITUDE_INTEGRAL_MAX_ERROR_S = 0.60
-FIGURE8_ALTITUDE_CORRECTION_LIMIT_RAW = 1800.0
-FIGURE8_ALTITUDE_CORRECTION_SLEW_RAW_PER_S = 3000.0
+FIGURE8_ALTITUDE_CORRECTION_LIMIT_RAW = 2200.0
+FIGURE8_ALTITUDE_CORRECTION_SLEW_RAW_PER_S = 4000.0
+# Banking redirects part of thrust horizontally. Feed forward the thrust that
+# preserves vertical support at the previous command's roll/pitch, while the
+# existing Z PID remains responsible for residual error and recovery.
+FIGURE8_TILT_THRUST_COMPENSATION_ENABLED = True
+FIGURE8_TILT_THRUST_COMPENSATION_SCALE = 1.00
+FIGURE8_TILT_THRUST_COMPENSATION_LIMIT_RAW = 2800.0
 
 # Misc.
 OUTPUT_DIR = "flight_logs"
@@ -310,6 +378,26 @@ class Telemetry:
             return self.battery_v, self.estimate_z, estimate_age
 
 
+class CommandState:
+    def __init__(self):
+        self._lock = Lock()
+        self.roll = 0.0
+        self.pitch = 0.0
+        self.yawrate = 0.0
+        self.thrust = 0
+
+    def update(self, roll, pitch, yawrate, thrust):
+        with self._lock:
+            self.roll = float(roll)
+            self.pitch = float(pitch)
+            self.yawrate = float(yawrate)
+            self.thrust = int(thrust)
+
+    def snapshot(self):
+        with self._lock:
+            return self.roll, self.pitch, self.yawrate, self.thrust
+
+
 class MocapReader(Thread):
     def __init__(self, state):
         Thread.__init__(self)
@@ -358,6 +446,7 @@ class CsvLogger:
         "phase",
         "safety_descent_active",
         "safety_descent_reason",
+        "cage_violation_for_s",
         "controlled_safety_descent_active",
         "safety_descent_target_height_m",
         "hold_target_frozen",
@@ -394,6 +483,12 @@ class CsvLogger:
         "figure8_elapsed_s",
         "figure8_path_elapsed_s",
         "figure8_startup_ramp",
+        "figure8_path_speed_scale",
+        "figure8_path_speed_target_scale",
+        "figure8_path_delay_s",
+        "figure8_effective_period_s",
+        "figure8_cage_clearance_m",
+        "figure8_cage_speed_limit_scale",
         "figure8_target_error_limit_m",
         "figure8_requested_radius_x_m",
         "figure8_requested_radius_y_m",
@@ -412,6 +507,7 @@ class CsvLogger:
         "figure8_height_error_m",
         "figure8_altitude_integral_error_s",
         "figure8_altitude_correction_raw",
+        "figure8_tilt_thrust_compensation_raw",
         "height_assist_mode",
         "height_assist_active",
         "prefigure8_height_hold_active",
@@ -440,10 +536,15 @@ class CsvLogger:
         "velocity_y_m_s",
         "velocity_z_m_s",
         "horizontal_speed_m_s",
+        "target_velocity_x_m_s",
+        "target_velocity_y_m_s",
+        "target_horizontal_speed_m_s",
         "body_error_x_m",
         "body_error_y_m",
         "body_velocity_x_m_s",
         "body_velocity_y_m_s",
+        "body_target_velocity_x_m_s",
+        "body_target_velocity_y_m_s",
         "integral_x_error_s",
         "integral_y_error_s",
         "xy_gain_scale",
@@ -635,21 +736,84 @@ def figure8_max_distance_from_center(radius_x, radius_y):
     return math.hypot(half_x, radius_y)
 
 
-def cage_violation_reason(x, y):
-    bounds = cage_bounds(CAGE_WALL_MARGIN_M)
-    if x < bounds["x_min"]:
-        return f"Cage X min {x:.3f}m < {bounds['x_min']:.3f}m"
-    if x > bounds["x_max"]:
-        return f"Cage X max {x:.3f}m > {bounds['x_max']:.3f}m"
-    if y < bounds["y_min"]:
-        return f"Cage Y min {y:.3f}m < {bounds['y_min']:.3f}m"
-    if y > bounds["y_max"]:
-        return f"Cage Y max {y:.3f}m > {bounds['y_max']:.3f}m"
+def measured_corridor_bounds(center_x, center_y):
+    return {
+        "x_min": center_x - MEASURED_CORRIDOR_BACKWARD_M,
+        "x_max": center_x + MEASURED_CORRIDOR_FORWARD_M,
+        "y_min": center_y - MEASURED_CORRIDOR_RIGHT_M,
+        "y_max": center_y + MEASURED_CORRIDOR_LEFT_M,
+    }
+
+
+def inset_bounds(bounds, margin):
+    return {
+        "x_min": bounds["x_min"] + margin,
+        "x_max": bounds["x_max"] - margin,
+        "y_min": bounds["y_min"] + margin,
+        "y_max": bounds["y_max"] - margin,
+    }
+
+
+def measured_corridor_corner_points(center_x, center_y, margin=0.0):
+    """Infer rectangular corner points from the four measured corridors."""
+    bounds = inset_bounds(measured_corridor_bounds(center_x, center_y), margin)
+    return (
+        (bounds["x_max"], bounds["y_max"]),  # front-left
+        (bounds["x_max"], bounds["y_min"]),  # front-right
+        (bounds["x_min"], bounds["y_min"]),  # back-right
+        (bounds["x_min"], bounds["y_max"]),  # back-left
+    )
+
+
+def cage_violation_reason(x, y, center_x, center_y):
+    bounds = measured_corridor_bounds(center_x, center_y)
+    x_min_limit = bounds["x_min"] - CAGE_VIOLATION_TOLERANCE_M
+    x_max_limit = bounds["x_max"] + CAGE_VIOLATION_TOLERANCE_M
+    y_min_limit = bounds["y_min"] - CAGE_VIOLATION_TOLERANCE_M
+    y_max_limit = bounds["y_max"] + CAGE_VIOLATION_TOLERANCE_M
+    if x < x_min_limit:
+        return f"Cage X min {x:.3f}m < {x_min_limit:.3f}m"
+    if x > x_max_limit:
+        return f"Cage X max {x:.3f}m > {x_max_limit:.3f}m"
+    if y < y_min_limit:
+        return f"Cage Y min {y:.3f}m < {y_min_limit:.3f}m"
+    if y > y_max_limit:
+        return f"Cage Y max {y:.3f}m > {y_max_limit:.3f}m"
     return ""
 
 
+def cage_clearance_m(x, y, center_x, center_y):
+    bounds = measured_corridor_bounds(center_x, center_y)
+    return min(
+        x - bounds["x_min"],
+        bounds["x_max"] - x,
+        y - bounds["y_min"],
+        bounds["y_max"] - y,
+    )
+
+
+def figure8_cage_speed_limit(cage_clearance):
+    if cage_clearance >= FIGURE8_CAGE_SLOWDOWN_START_M:
+        return FIGURE8_NOMINAL_SPEED_SCALE
+    if cage_clearance <= FIGURE8_CAGE_SLOWDOWN_FULL_M:
+        return FIGURE8_CAGE_MIN_SPEED_SCALE
+
+    fraction = (
+        (cage_clearance - FIGURE8_CAGE_SLOWDOWN_FULL_M)
+        / (FIGURE8_CAGE_SLOWDOWN_START_M - FIGURE8_CAGE_SLOWDOWN_FULL_M)
+    )
+    return (
+        FIGURE8_CAGE_MIN_SPEED_SCALE
+        + (
+            FIGURE8_NOMINAL_SPEED_SCALE - FIGURE8_CAGE_MIN_SPEED_SCALE
+        ) * smoothstep(fraction)
+    )
+
+
 def make_figure8_profile(center_x, center_y):
-    planning_bounds = cage_bounds(CAGE_WALL_MARGIN_M + FIGURE8_TRACKING_RESERVE_M)
+    planning_bounds = cage_bounds(
+        CAGE_WALL_MARGIN_M + FIGURE8_TRACKING_RESERVE_M
+    )
     hard_bounds = cage_bounds(CAGE_WALL_MARGIN_M)
 
     max_radius_x = 2.0 * min(
@@ -778,12 +942,91 @@ def wait_for_fresh_pose(mocap_state):
     raise RuntimeError("No fresh mocap pose received before timeout")
 
 
-def send_zero_thrust(cf, count=10, send_stop=True):
+def send_setpoint(cf, roll, pitch, yawrate, thrust, command_state=None):
+    # Keep the latest output so unexpected cleanup can begin from the actual
+    # command in flight and attempt a controlled descent instead of a blind cut.
+    cf.commander.send_setpoint(roll, pitch, yawrate, thrust)
+    if command_state is not None:
+        command_state.update(roll, pitch, yawrate, thrust)
+
+
+def send_zero_thrust(cf, count=10, send_stop=True, command_state=None):
     for _ in range(count):
-        cf.commander.send_setpoint(0.0, 0.0, 0.0, 0)
+        send_setpoint(cf, 0.0, 0.0, 0.0, 0, command_state)
         time.sleep(COMMAND_PERIOD_S)
     if send_stop:
         cf.commander.send_stop_setpoint()
+
+
+def shutdown_safety_descent(cf, mocap_state, start_z, command_state):
+    """Land after an unexpected host-side exit without issuing a thrust cut."""
+    _, _, _, initial_thrust = command_state.snapshot()
+    if initial_thrust <= MIN_THRUST or mocap_state is None or start_z is None:
+        return
+
+    print("[SAFETY] Unexpected exit: starting neutral fallback safety descent.")
+    base_thrust = float(initial_thrust)
+    target_height = None
+    previous_position = None
+    previous_update = None
+    last_time = time.time()
+
+    while True:
+        now = time.time()
+        dt = max(0.0, now - last_time)
+        last_time = now
+        position, _, last_update, _ = mocap_state.snapshot()
+        mocap_fresh = (
+            position is not None
+            and last_update
+            and now - last_update <= MOCAP_STALE_TIMEOUT_S
+        )
+
+        if mocap_fresh:
+            height = position[2] - start_z
+            if height <= SHUTDOWN_SAFETY_DESCENT_GROUND_HEIGHT_M:
+                send_zero_thrust(cf, count=EMERGENCY_ZERO_THRUST_PACKETS,
+                                 command_state=command_state)
+                print("[SAFETY] Fallback descent confirmed near ground.")
+                return
+
+            velocity_z = 0.0
+            if previous_position is not None and last_update > previous_update:
+                velocity_z = (position[2] - previous_position[2]) / (
+                    last_update - previous_update
+                )
+            previous_position = position
+            previous_update = last_update
+            if target_height is None:
+                target_height = height
+            target_height = max(
+                SHUTDOWN_SAFETY_DESCENT_GROUND_HEIGHT_M,
+                target_height - SHUTDOWN_SAFETY_DESCENT_RATE_M_S * dt,
+            )
+            height_error = target_height - height
+            correction = clamp(
+                CONTROLLED_SAFETY_ALTITUDE_KP_RAW_PER_M * height_error
+                - CONTROLLED_SAFETY_ALTITUDE_KD_RAW_PER_M_S * velocity_z,
+                -CONTROLLED_SAFETY_ALTITUDE_CORRECTION_LIMIT_RAW,
+                CONTROLLED_SAFETY_ALTITUDE_CORRECTION_LIMIT_RAW,
+            )
+        else:
+            correction = 0.0
+            target_height = None
+            previous_position = None
+            previous_update = None
+
+        base_thrust = max(
+            SHUTDOWN_SAFETY_DESCENT_MIN_THRUST_RAW,
+            base_thrust - SHUTDOWN_SAFETY_DESCENT_BASE_RAMP_RAW_PER_S * dt,
+        )
+        command_thrust = int(clamp(
+            base_thrust + correction,
+            SHUTDOWN_SAFETY_DESCENT_MIN_THRUST_RAW,
+            MAX_MANUAL_THRUST,
+        ))
+        send_setpoint(cf, 0.0, 0.0, 0.0, command_thrust, command_state)
+        time.sleep(COMMAND_PERIOD_S)
 
 
 def send_arming_request(cf, do_arm):
@@ -834,6 +1077,24 @@ def figure8_path_clock(elapsed_s):
     ramp = figure8_startup_ramp(elapsed_s)
     path_elapsed = FIGURE8_STARTUP_RAMP_S * (u ** 3 - 0.5 * u ** 4)
     return path_elapsed, ramp
+
+
+def figure8_speed_scale_for_error(target_error):
+    if target_error <= FIGURE8_SLOWDOWN_START_ERROR_M:
+        return FIGURE8_NOMINAL_SPEED_SCALE
+    if target_error >= FIGURE8_SLOWDOWN_FULL_ERROR_M:
+        return FIGURE8_MIN_SPEED_SCALE
+
+    fraction = (
+        (target_error - FIGURE8_SLOWDOWN_START_ERROR_M)
+        / (FIGURE8_SLOWDOWN_FULL_ERROR_M - FIGURE8_SLOWDOWN_START_ERROR_M)
+    )
+    return (
+        FIGURE8_NOMINAL_SPEED_SCALE
+        + (
+            FIGURE8_MIN_SPEED_SCALE - FIGURE8_NOMINAL_SPEED_SCALE
+        ) * smoothstep(fraction)
+    )
 
 
 def figure8_target(center_x, center_y, elapsed_s, radius_x, radius_y):
@@ -891,7 +1152,7 @@ def draw(stdscr, state):
         "Controls: R ready | T 3ft hold | Up/Down thrust or Z target | PgDn descent",
     )
     add_line(stdscr, 3, 0, "Trim: W/S pitch +/- | A/D roll -/+ | J/L yaw target -/+ | C clear")
-    add_line(stdscr, 4, 0, "F start figure-8 / return+land | H lock X/Y | Space cut | Q/Esc cut+quit")
+    add_line(stdscr, 4, 0, "F start figure-8 / return+land | H lock X/Y | Space cut | Q/Esc descent")
     add_line(stdscr, 5, 0, f"Phase: {state['phase']} | {state['message']}")
     add_line(
         stdscr,
@@ -987,7 +1248,8 @@ def draw(stdscr, state):
         f"| mode={state['height_assist_mode'] or '-'} "
         f"| target={state['altitude_target']:+.3f}m "
         f"| err={state['altitude_error']:+.3f}m "
-        f"| corr={state['altitude_correction']:+.0f} raw",
+        f"| corr={state['altitude_correction']:+.0f} "
+        f"tilt={state['tilt_compensation']:+.0f} raw",
     )
     add_line(
         stdscr,
@@ -996,11 +1258,29 @@ def draw(stdscr, state):
         f"3ft ready: {'YES' if state['prefigure8_height_ready'] else 'no'} "
         f"| hold={'ON' if state['prefigure8_height_hold_active'] else 'off'}",
     )
-    add_line(stdscr, 21, 0, "Normal landing: PgDn. Emergency: Space or Q.")
+    add_line(
+        stdscr,
+        20,
+        0,
+        f"Path speed: {state['figure8_path_speed']:.2f}x "
+        f"(target {state['figure8_path_speed_target']:.2f}x) "
+        f"| effective period={state['figure8_effective_period']:.1f}s",
+    )
+    add_line(stdscr, 21, 0, "Normal landing: PgDn. Safety descent: Q/Esc. Emergency cut: Space.")
     stdscr.refresh()
 
 
-def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_position, start_quat, logger):
+def run_control_loop(
+    stdscr,
+    cf,
+    mocap_state,
+    mocap_reader,
+    telemetry,
+    start_position,
+    start_quat,
+    logger,
+    command_state,
+):
     curses.curs_set(0)
     stdscr.nodelay(True)
     stdscr.keypad(True)
@@ -1030,6 +1310,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
     figure8_started_at = None
     figure8_profile = None
     figure8_target_height = None
+    figure8_path_delay_s = 0.0
+    figure8_path_speed_scale = FIGURE8_NOMINAL_SPEED_SCALE
+    figure8_path_speed_target_scale = FIGURE8_NOMINAL_SPEED_SCALE
     prefigure8_height_hold_active = False
     prefigure8_target_height = PREFIGURE8_HEIGHT_TARGET_M
     altitude_hold_correction = 0.0
@@ -1043,12 +1326,14 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
     last_logged_frame = None
     last_stale_log_at = 0.0
     previous_sample = None
+    previous_figure8_target = None
     stale_started_at = None
     stale_saved_figure8_active = False
     stale_saved_figure8_started_at = None
     stale_saved_figure8_profile = None
     stale_saved_figure8_target_height = None
     target_error_exceeded_since = None
+    cage_violation_started_at = None
     exit_after_log = False
 
     velocity_x = 0.0
@@ -1071,6 +1356,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         nonlocal safety_descent_target_height
         nonlocal figure8_active, figure8_started_at, figure8_profile
         nonlocal figure8_target_height, altitude_hold_correction, altitude_integral
+        nonlocal figure8_path_delay_s, figure8_path_speed_scale
+        nonlocal figure8_path_speed_target_scale
         nonlocal prefigure8_height_hold_active
         nonlocal return_land_active, return_land_descent_started
         nonlocal integral_x, integral_y
@@ -1087,6 +1374,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         figure8_started_at = None
         figure8_profile = None
         figure8_target_height = None
+        figure8_path_delay_s = 0.0
+        figure8_path_speed_scale = FIGURE8_NOMINAL_SPEED_SCALE
+        figure8_path_speed_target_scale = FIGURE8_NOMINAL_SPEED_SCALE
         prefigure8_height_hold_active = False
         altitude_hold_correction = 0.0
         altitude_integral = 0.0
@@ -1126,6 +1416,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         mocap_stale = mocap_age > MOCAP_STALE_TIMEOUT_S
         yaw = yaw_from_quat(quat) + body_yaw_offset_rad
         current_height = position[2] - start_z
+        cage_violation_for_s = 0.0
+        if mocap_stale:
+            cage_violation_started_at = None
         stale_for = 0.0
         mocap_stale_coast_active = False
 
@@ -1241,6 +1534,19 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     measured_vx = (position[0] - previous_position[0]) / sample_dt
                     measured_vy = (position[1] - previous_position[1]) / sample_dt
                     measured_vz = (position[2] - previous_position[2]) / sample_dt
+                    measured_horizontal_speed = math.hypot(measured_vx, measured_vy)
+                    if measured_horizontal_speed > MOCAP_MAX_HORIZONTAL_SPEED_M_S:
+                        velocity_scale = (
+                            MOCAP_MAX_HORIZONTAL_SPEED_M_S
+                            / measured_horizontal_speed
+                        )
+                        measured_vx *= velocity_scale
+                        measured_vy *= velocity_scale
+                    measured_vz = clamp(
+                        measured_vz,
+                        -MOCAP_MAX_VERTICAL_SPEED_M_S,
+                        MOCAP_MAX_VERTICAL_SPEED_M_S,
+                    )
                     measured_yawrate = wrap_pi(yaw - previous_yaw) / sample_dt
                     velocity_x = 0.70 * velocity_x + 0.30 * measured_vx
                     velocity_y = 0.70 * velocity_y + 0.30 * measured_vy
@@ -1252,23 +1558,17 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         key_code = "" if key == -1 else key
         key_name = describe_key(key)
         if key in (ord("q"), ord("Q"), 27):
-            stop_reason = "operator_exit"
-            send_zero_thrust(cf, count=EMERGENCY_ZERO_THRUST_PACKETS)
+            stop_reason = "operator_exit_requested"
+            start_safety_descent("operator exit requested")
+            message = "Operator exit requested; safety descent active."
+        elif key == ord(" "):
+            stop_reason = "operator_emergency_cut"
+            send_zero_thrust(
+                cf,
+                count=EMERGENCY_ZERO_THRUST_PACKETS,
+                command_state=command_state,
+            )
             break
-        if key == ord(" "):
-            stop_reason = "operator_cut"
-            thrust = 0
-            target_thrust = 0
-            descent_active = False
-            safety_descent_active = False
-            figure8_target_height = None
-            prefigure8_height_hold_active = False
-            altitude_hold_correction = 0.0
-            altitude_integral = 0.0
-            return_land_active = False
-            return_land_descent_started = False
-            send_zero_thrust(cf, count=EMERGENCY_ZERO_THRUST_PACKETS, send_stop=False)
-            message = "Emergency zero thrust sent immediately."
         elif key == curses.KEY_UP:
             if safety_descent_active:
                 message = "Safety descent active; thrust increase ignored."
@@ -1493,6 +1793,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     figure8_started_at = now
                     figure8_profile = requested_profile
                     figure8_target_height = clamp_figure8_height_target(current_height)
+                    figure8_path_delay_s = 0.0
+                    figure8_path_speed_scale = FIGURE8_NOMINAL_SPEED_SCALE
+                    figure8_path_speed_target_scale = FIGURE8_NOMINAL_SPEED_SCALE
                     prefigure8_height_hold_active = False
                     altitude_hold_correction = 0.0
                     altitude_integral = 0.0
@@ -1652,18 +1955,34 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         altitude_hold_active = height_assist_target is not None
         if altitude_hold_active:
             altitude_height_error = height_assist_target - height
-            altitude_integral = clamp(
+            candidate_altitude_integral = clamp(
                 altitude_integral + altitude_height_error * dt,
                 -FIGURE8_ALTITUDE_INTEGRAL_MAX_ERROR_S,
                 FIGURE8_ALTITUDE_INTEGRAL_MAX_ERROR_S,
             )
-            target_altitude_correction = (
+            candidate_altitude_correction = (
                 altitude_kp * altitude_height_error
-                + altitude_ki * altitude_integral
+                + altitude_ki * candidate_altitude_integral
                 - altitude_kd * velocity_z
             )
+            # Do not accumulate integral in the direction of an already
+            # saturated correction; it otherwise causes a delayed Z rebound.
+            if (
+                candidate_altitude_correction > altitude_correction_limit
+                and altitude_height_error > 0.0
+            ) or (
+                candidate_altitude_correction < -altitude_correction_limit
+                and altitude_height_error < 0.0
+            ):
+                candidate_altitude_integral = altitude_integral
+                candidate_altitude_correction = (
+                    altitude_kp * altitude_height_error
+                    + altitude_ki * candidate_altitude_integral
+                    - altitude_kd * velocity_z
+                )
+            altitude_integral = candidate_altitude_integral
             target_altitude_correction = clamp(
-                target_altitude_correction,
+                candidate_altitude_correction,
                 -altitude_correction_limit,
                 altitude_correction_limit,
             )
@@ -1679,9 +1998,28 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             altitude_hold_correction = 0.0
             altitude_integral = 0.0
 
+        figure8_tilt_thrust_compensation = 0.0
+        if (
+            height_assist_mode == "figure8"
+            and FIGURE8_TILT_THRUST_COMPENSATION_ENABLED
+        ):
+            vertical_support_fraction = (
+                math.cos(math.radians(last_fresh_roll_cmd))
+                * math.cos(math.radians(last_fresh_pitch_cmd))
+            )
+            if vertical_support_fraction > 0.1:
+                figure8_tilt_thrust_compensation = clamp(
+                    FIGURE8_TILT_THRUST_COMPENSATION_SCALE
+                    * thrust * (1.0 / vertical_support_fraction - 1.0),
+                    0.0,
+                    FIGURE8_TILT_THRUST_COMPENSATION_LIMIT_RAW,
+                )
+
         command_thrust = int(
             clamp(
-                thrust + altitude_hold_correction,
+                thrust
+                + altitude_hold_correction
+                + figure8_tilt_thrust_compensation,
                 MIN_THRUST,
                 MAX_MANUAL_THRUST,
             )
@@ -1689,7 +2027,15 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
 
         battery_v, estimate_z, estimator_age = telemetry.snapshot()
         estimator_height = estimate_z - start_estimate_z
-        if command_thrust > SAFETY_THRUST_RAW and estimator_age > ESTIMATOR_STALE_TIMEOUT_S:
+        estimator_height_safety_active = (
+            not ESTIMATOR_HEIGHT_SAFETY_ONLY_WHEN_MOCAP_STALE
+            or mocap_stale
+        )
+        if (
+            estimator_height_safety_active
+            and command_thrust > SAFETY_THRUST_RAW
+            and estimator_age > ESTIMATOR_STALE_TIMEOUT_S
+        ):
             start_safety_descent(
                 f"Estimator height telemetry stale for {estimator_age:.2f}s "
                 f"while thrust is {command_thrust}"
@@ -1724,10 +2070,6 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         drift = math.hypot(drift_x, drift_y)
         speed = math.hypot(velocity_x, velocity_y)
 
-        estimator_height_safety_active = (
-            not ESTIMATOR_HEIGHT_SAFETY_ONLY_WHEN_MOCAP_STALE
-            or mocap_stale
-        )
         if (
             ENFORCE_HEIGHT_LIMITS
             and estimator_height_safety_active
@@ -1777,19 +2119,47 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                     f"XY drift {drift:.3f}m exceeded {xy_drift_limit:.3f}m"
                 )
             if ENFORCE_CAGE_BOUNDS:
-                cage_reason = cage_violation_reason(position[0], position[1])
-                if cage_reason:
-                    start_safety_descent(cage_reason)
+                cage_reason = cage_violation_reason(
+                    position[0], position[1], start_x, start_y
+                )
+                if cage_reason and not safety_descent_active:
+                    if cage_violation_started_at is None:
+                        cage_violation_started_at = now
+                    cage_violation_for_s = now - cage_violation_started_at
+                    if cage_violation_for_s >= CAGE_VIOLATION_GRACE_S:
+                        start_safety_descent(
+                            f"{cage_reason} for {cage_violation_for_s:.2f}s"
+                        )
+                    else:
+                        message = (
+                            f"Cage boundary crossed; safety descent in "
+                            f"{CAGE_VIOLATION_GRACE_S - cage_violation_for_s:.2f}s "
+                            "if it persists."
+                        )
+                elif not cage_reason:
+                    cage_violation_started_at = None
 
         if figure8_active and figure8_started_at is not None:
+            # The nominal clock advances the requested path. Any accumulated
+            # delay below preserves the current path phase while tracking
+            # recovers, rather than skipping ahead to a distant target.
             figure8_elapsed = now - figure8_started_at
-            figure8_path_elapsed, figure8_ramp = figure8_path_clock(
+            base_figure8_path_elapsed, figure8_ramp = figure8_path_clock(
                 figure8_elapsed
+            )
+            figure8_path_elapsed = max(
+                0.0,
+                FIGURE8_NOMINAL_SPEED_SCALE * base_figure8_path_elapsed
+                - figure8_path_delay_s,
+            )
+            figure8_effective_period_s = (
+                FIGURE8_PERIOD_S / figure8_path_speed_scale
             )
         else:
             figure8_elapsed = 0.0
             figure8_ramp = 0.0
             figure8_path_elapsed = 0.0
+            figure8_effective_period_s = 0.0
 
         if safety_descent_active:
             target_x, target_y = hold_x, hold_y
@@ -1829,6 +2199,24 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 phase = "xy-hold"
             if descent_active:
                 phase = "descent"
+
+        if phase == "figure8":
+            if previous_figure8_target is None or dt <= 0.0:
+                target_velocity_x = 0.0
+                target_velocity_y = 0.0
+            else:
+                previous_target_x, previous_target_y = previous_figure8_target
+                target_velocity_x = (target_x - previous_target_x) / dt
+                target_velocity_y = (target_y - previous_target_y) / dt
+            previous_figure8_target = (target_x, target_y)
+        else:
+            target_velocity_x = 0.0
+            target_velocity_y = 0.0
+            previous_figure8_target = None
+        target_horizontal_speed = math.hypot(
+            target_velocity_x,
+            target_velocity_y,
+        )
 
         error_x = target_x - position[0]
         error_y = target_y - position[1]
@@ -1953,6 +2341,33 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             target_error_exceeded_since = None
             target_error_exceeded_s = 0.0
 
+        figure8_cage_clearance = cage_clearance_m(
+            position[0], position[1], start_x, start_y
+        )
+        figure8_cage_speed_limit_scale = FIGURE8_NOMINAL_SPEED_SCALE
+        if figure8_active and not mocap_stale and not safety_descent_active:
+            # The lower of error and cage limits owns the target speed. Slow
+            # down faster than we speed up so the drone gets recovery room
+            # before the path clock asks for more performance again.
+            figure8_cage_speed_limit_scale = figure8_cage_speed_limit(
+                figure8_cage_clearance
+            )
+            figure8_path_speed_target_scale = min(
+                figure8_speed_scale_for_error(target_error),
+                figure8_cage_speed_limit_scale,
+            )
+            figure8_path_speed_scale = slew_toward(
+                figure8_path_speed_scale,
+                figure8_path_speed_target_scale,
+                FIGURE8_SPEEDUP_SCALE_PER_S,
+                FIGURE8_SLOWDOWN_SCALE_PER_S,
+                dt,
+            )
+            figure8_path_delay_s += max(
+                0.0,
+                FIGURE8_NOMINAL_SPEED_SCALE - figure8_path_speed_scale,
+            ) * dt
+
         target_yaw_command = wrap_pi(target_yaw + manual_yaw_offset)
         yaw_error = wrap_pi(target_yaw_command - yaw)
         if mocap_stale or assist_blend <= 0.0:
@@ -1960,6 +2375,8 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             body_error_y = 0.0
             body_velocity_x = 0.0
             body_velocity_y = 0.0
+            body_target_velocity_x = 0.0
+            body_target_velocity_y = 0.0
             integral_x = 0.0
             integral_y = 0.0
             gain_scale = 0.0
@@ -1970,6 +2387,11 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
         else:
             body_error_x, body_error_y = rotate_world_to_body(error_x, error_y, yaw)
             body_velocity_x, body_velocity_y = rotate_world_to_body(velocity_x, velocity_y, yaw)
+            body_target_velocity_x, body_target_velocity_y = rotate_world_to_body(
+                target_velocity_x,
+                target_velocity_y,
+                yaw,
+            )
 
             airborne = command_thrust > 22000 or height > 0.03
             if airborne and dt > 0.0:
@@ -1990,11 +2412,23 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
 
             gain_scale = AGGRESSIVE_GAIN_SCALE if target_error >= AGGRESSIVE_ERROR_M else 1.0
             control_x = assist_blend * (
-                gain_scale * (KP_XY * body_error_x - KD_XY * body_velocity_x)
+                gain_scale * (
+                    KP_XY * body_error_x
+                    + KD_XY * (
+                        FIGURE8_TARGET_VELOCITY_FEEDFORWARD * body_target_velocity_x
+                        - body_velocity_x
+                    )
+                )
                 + KI_XY * integral_x
             )
             control_y = assist_blend * (
-                gain_scale * (KP_XY * body_error_y - KD_XY * body_velocity_y)
+                gain_scale * (
+                    KP_XY * body_error_y
+                    + KD_XY * (
+                        FIGURE8_TARGET_VELOCITY_FEEDFORWARD * body_target_velocity_y
+                        - body_velocity_y
+                    )
+                )
                 + KI_XY * integral_y
             )
             base_angle_limit = low_altitude_angle_limit(height)
@@ -2065,10 +2499,17 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             last_fresh_pitch_cmd = pitch_cmd
             last_fresh_yawrate_cmd = yawrate_cmd
 
-        cf.commander.send_setpoint(roll_cmd, pitch_cmd, yawrate_cmd, command_thrust)
+        send_setpoint(
+            cf,
+            roll_cmd,
+            pitch_cmd,
+            yawrate_cmd,
+            command_thrust,
+            command_state,
+        )
 
-        if ENFORCE_BATTERY_LIMITS and battery_v and battery_v < VERY_LOW_BATTERY_V:
-            start_safety_descent("battery is very low")
+        if ENFORCE_BATTERY_LIMITS and battery_v and battery_v < LOW_BATTERY_V:
+            start_safety_descent(f"battery low ({battery_v:.2f} V)")
 
         should_log = frame_count != last_logged_frame
         if key != -1:
@@ -2086,6 +2527,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "phase": phase,
                 "safety_descent_active": int(safety_descent_active),
                 "safety_descent_reason": safety_descent_reason,
+                "cage_violation_for_s": cage_violation_for_s,
                 "controlled_safety_descent_active": int(
                     controlled_safety_descent_active
                 ),
@@ -2128,6 +2570,12 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "figure8_elapsed_s": figure8_elapsed,
                 "figure8_path_elapsed_s": figure8_path_elapsed,
                 "figure8_startup_ramp": figure8_ramp,
+                "figure8_path_speed_scale": figure8_path_speed_scale,
+                "figure8_path_speed_target_scale": figure8_path_speed_target_scale,
+                "figure8_path_delay_s": figure8_path_delay_s,
+                "figure8_effective_period_s": figure8_effective_period_s,
+                "figure8_cage_clearance_m": figure8_cage_clearance,
+                "figure8_cage_speed_limit_scale": figure8_cage_speed_limit_scale,
                 "figure8_target_error_limit_m": target_error_limit,
                 "figure8_requested_radius_x_m": FIGURE8_RADIUS_X_M,
                 "figure8_requested_radius_y_m": FIGURE8_RADIUS_Y_M,
@@ -2150,6 +2598,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "figure8_height_error_m": altitude_height_error,
                 "figure8_altitude_integral_error_s": altitude_integral,
                 "figure8_altitude_correction_raw": altitude_hold_correction,
+                "figure8_tilt_thrust_compensation_raw": figure8_tilt_thrust_compensation,
                 "height_assist_mode": height_assist_mode,
                 "height_assist_active": int(altitude_hold_active),
                 "prefigure8_height_hold_active": int(prefigure8_height_hold_active),
@@ -2178,10 +2627,15 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "velocity_y_m_s": velocity_y,
                 "velocity_z_m_s": velocity_z,
                 "horizontal_speed_m_s": speed,
+                "target_velocity_x_m_s": target_velocity_x,
+                "target_velocity_y_m_s": target_velocity_y,
+                "target_horizontal_speed_m_s": target_horizontal_speed,
                 "body_error_x_m": body_error_x,
                 "body_error_y_m": body_error_y,
                 "body_velocity_x_m_s": body_velocity_x,
                 "body_velocity_y_m_s": body_velocity_y,
+                "body_target_velocity_x_m_s": body_target_velocity_x,
+                "body_target_velocity_y_m_s": body_target_velocity_y,
                 "integral_x_error_s": integral_x,
                 "integral_y_error_s": integral_y,
                 "xy_gain_scale": gain_scale,
@@ -2219,6 +2673,9 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 "figure8_elapsed": figure8_elapsed,
                 "figure8_target_dx": target_x - hold_x,
                 "figure8_target_dy": target_y - hold_y,
+                "figure8_path_speed": figure8_path_speed_scale,
+                "figure8_path_speed_target": figure8_path_speed_target_scale,
+                "figure8_effective_period": figure8_effective_period_s,
                 "figure8_width": figure8_radius_x,
                 "figure8_height": 2.0 * figure8_radius_y,
                 "figure8_wall_margin": figure8_wall_margin,
@@ -2231,6 +2688,7 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
                 ),
                 "altitude_error": altitude_height_error,
                 "altitude_correction": altitude_hold_correction,
+                "tilt_compensation": figure8_tilt_thrust_compensation,
                 "height_assist_mode": height_assist_mode,
                 "prefigure8_height_hold_active": prefigure8_height_hold_active,
                 "prefigure8_height_ready": prefigure8_height_ready,
@@ -2258,7 +2716,11 @@ def run_control_loop(stdscr, cf, mocap_state, mocap_reader, telemetry, start_pos
             last_draw_at = now
 
         if exit_after_log:
-            send_zero_thrust(cf, count=EMERGENCY_ZERO_THRUST_PACKETS)
+            send_zero_thrust(
+                cf,
+                count=EMERGENCY_ZERO_THRUST_PACKETS,
+                command_state=command_state,
+            )
             break
 
         time.sleep(COMMAND_PERIOD_S)
@@ -2312,9 +2774,19 @@ def main():
         f"Y[{raw_bounds['y_min']:.2f}, {raw_bounds['y_max']:.2f}]"
     )
     print(
-        f"Cage flight bounds: X[{flight_bounds['x_min']:.2f}, {flight_bounds['x_max']:.2f}], "
-        f"Y[{flight_bounds['y_min']:.2f}, {flight_bounds['y_max']:.2f}], "
-        f"planning reserve bounds X[{planning_bounds['x_min']:.2f}, {planning_bounds['x_max']:.2f}]"
+        f"Raw figure-8 planning bounds: X[{flight_bounds['x_min']:.2f}, "
+        f"{flight_bounds['x_max']:.2f}], Y[{flight_bounds['y_min']:.2f}, "
+        f"{flight_bounds['y_max']:.2f}], planning reserve X["
+        f"{planning_bounds['x_min']:.2f}, {planning_bounds['x_max']:.2f}]"
+    )
+    print(
+        "Active measured corridor from locked start: "
+        f"+X {MEASURED_CORRIDOR_FORWARD_M:.2f}m, "
+        f"-X {MEASURED_CORRIDOR_BACKWARD_M:.2f}m, "
+        f"+Y {MEASURED_CORRIDOR_LEFT_M:.2f}m, "
+        f"-Y {MEASURED_CORRIDOR_RIGHT_M:.2f}m; "
+        f"tolerance {CAGE_VIOLATION_TOLERANCE_M:.2f}m / "
+        f"grace {CAGE_VIOLATION_GRACE_S:.2f}s"
     )
     print(
         f"Hard stops: climb <= {MAX_CLIMB_RATE_M_S:.2f}m/s, "
@@ -2328,7 +2800,11 @@ def main():
         f"{CONTROLLED_SAFETY_DESCENT_MIN_HEIGHT_M:.2f}m, "
         f"raw ramp {SAFETY_DESCENT_RAMP_RAW_PER_S:.0f} raw/s"
     )
-    print(f"XY gains: kp={KP_XY}, kd={KD_XY}, ki={KI_XY}, signs roll={ROLL_SIGN}, pitch={PITCH_SIGN}")
+    print(
+        f"XY gains: kp={KP_XY}, kd={KD_XY}, ki={KI_XY}, "
+        f"figure-8 velocity feedforward={FIGURE8_TARGET_VELOCITY_FEEDFORWARD:.2f}, "
+        f"signs roll={ROLL_SIGN}, pitch={PITCH_SIGN}"
+    )
     print(f"Mocap frame: {LOCAL_FRAME_DESCRIPTION}")
     print(f"Body yaw offset for X/Y assist: {BODY_YAW_OFFSET_DEG:+.1f} deg")
     print(
@@ -2343,9 +2819,22 @@ def main():
         "auto-shrinks if the hold point is too close to a wall"
     )
     print(
+        f"Figure-8 speed governor: nominal {FIGURE8_NOMINAL_SPEED_SCALE:.2f}x "
+        f"({FIGURE8_PERIOD_S / FIGURE8_NOMINAL_SPEED_SCALE:.1f}s effective), "
+        f"slows to {FIGURE8_MIN_SPEED_SCALE:.2f}x for "
+        f"{FIGURE8_SLOWDOWN_START_ERROR_M:.2f}-{FIGURE8_SLOWDOWN_FULL_ERROR_M:.2f}m "
+        "tracking error"
+    )
+    print(
+        f"Figure-8 cage governor: slows from {FIGURE8_CAGE_SLOWDOWN_START_M:.2f}m "
+        f"clearance to {FIGURE8_CAGE_MIN_SPEED_SCALE:.2f}x at "
+        f"{FIGURE8_CAGE_SLOWDOWN_FULL_M:.2f}m"
+    )
+    print(
         f"Figure-8 Z hold: enabled={FIGURE8_ALTITUDE_HOLD_ENABLED}, "
         f"step={FIGURE8_ALTITUDE_STEP_M:.2f}m, "
-        f"correction <= +/-{FIGURE8_ALTITUDE_CORRECTION_LIMIT_RAW:.0f} raw"
+        f"correction <= +/-{FIGURE8_ALTITUDE_CORRECTION_LIMIT_RAW:.0f} raw, "
+        f"tilt compensation <= +{FIGURE8_TILT_THRUST_COMPENSATION_LIMIT_RAW:.0f} raw"
     )
     print("Close cfclient first. Keep a physical power-off option ready.")
     print("=" * 72)
@@ -2357,6 +2846,8 @@ def main():
     logger = CsvLogger()
     visualizer_process = start_live_visualizer(logger.output_path)
     cf = None
+    command_state = CommandState()
+    start_position = None
 
     clean_exit = False
     try:
@@ -2381,20 +2872,36 @@ def main():
 
             battery_v, _, _ = telemetry.snapshot()
             print(f"[INFO] Battery: {battery_v:.2f} V")
-            if ENFORCE_BATTERY_LIMITS and battery_v < VERY_LOW_BATTERY_V:
-                raise RuntimeError("Battery is very low. Do not fly.")
+            if ENFORCE_BATTERY_LIMITS and battery_v < LOW_BATTERY_V:
+                raise RuntimeError(
+                    f"Battery is below {LOW_BATTERY_V:.2f} V. Do not fly."
+                )
             if battery_v < LOW_BATTERY_V:
                 print("[WARN] Battery is low; use a fresh pack if possible.")
 
             input("Press ENTER to arm and start at zero thrust, or Ctrl+C to abort...")
             send_arming_request(cf, True)
             time.sleep(1.0)
-            send_zero_thrust(cf, count=25, send_stop=False)
+            send_zero_thrust(
+                cf,
+                count=25,
+                send_stop=False,
+                command_state=command_state,
+            )
 
             start_position, start_quat = wait_for_fresh_pose(mocap_state)
             print(
                 "[INFO] Locked flight-start target: "
                 f"x={start_position[0]:.3f}, y={start_position[1]:.3f}, z={start_position[2]:.3f}"
+            )
+            inferred_bounds = measured_corridor_bounds(
+                start_position[0],
+                start_position[1],
+            )
+            print(
+                "[INFO] Measured corridor safety/governor bounds: "
+                f"X[{inferred_bounds['x_min']:.2f}, {inferred_bounds['x_max']:.2f}], "
+                f"Y[{inferred_bounds['y_min']:.2f}, {inferred_bounds['y_max']:.2f}]."
             )
             _, body_yaw_offset_deg, raw_start_yaw_deg, auto_flipped = (
                 body_yaw_offset_for_start(start_quat)
@@ -2415,19 +2922,27 @@ def main():
                 start_position,
                 start_quat,
                 logger,
+                command_state,
             )
 
             print("\n[INFO] Flight loop ended.")
-            send_zero_thrust(cf, count=25)
+            send_zero_thrust(cf, count=25, command_state=command_state)
             send_arming_request(cf, False)
             altitude_log.stop()
             battery_log.stop()
             clean_exit = True
     finally:
-        print("\n[SAFETY] Cutting thrust and closing resources...")
+        print("\n[SAFETY] Landing before closing resources...")
         try:
             if cf is not None:
-                send_zero_thrust(cf, count=25)
+                if command_state.snapshot()[3] > MIN_THRUST:
+                    shutdown_safety_descent(
+                        cf,
+                        mocap_state,
+                        start_position[2] if start_position is not None else None,
+                        command_state,
+                    )
+                send_zero_thrust(cf, count=25, command_state=command_state)
                 send_arming_request(cf, False)
         finally:
             mocap_reader.close()

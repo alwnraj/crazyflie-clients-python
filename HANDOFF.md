@@ -1,6 +1,6 @@
 # Crazyflie Mocap Flight Handoff
 
-> Historical handoff, last updated 2026-07-08. The actively verified manual
+> Historical handoff, updated with the 2026-07-21 fast-flight campaign. The actively verified manual
 > flight procedure is now documented in
 > [`MOCAP_MANUAL_FIGURE8.md`](MOCAP_MANUAL_FIGURE8.md), alongside the current
 > constants in `mocap_manual_thrust_assisted_figure8.py`. Do not use the
@@ -9,6 +9,123 @@
 Date: 2026-07-08
 Repo: `/home/alwin-raj/Desktop/drone/crazyflie-clients-python`
 Branch: `aimslab/work`
+
+## 2026-07-21 Fast Compact Figure-8 Campaign
+
+The active powered path remains
+`mocap_manual_thrust_assisted_figure8.py`, using pilot-owned raw thrust with
+mocap X/Y, yaw, and altitude assistance. It is not HLC flight. The compact
+raw-corner figure-8 planner remains active; measured-corridor data is retained
+for cage safety and path-speed governing. Do not infer a boundary change from
+the speed work.
+
+The controller was advanced through reviewed, clean runs from 2026-07-20 to
+2026-07-21. The meaningful changes were:
+
+- moving-target velocity feedforward in the horizontal controller;
+- error- and cage-governed path-clock speed, so the target slows before error
+  becomes a safety problem;
+- a ramped nominal speed progression to `4.20x`, with faster clock recovery;
+- figure-8 attitude authority increased to `23 deg` only for airborne path
+  tracking;
+- velocity plausibility filtering for isolated mocap derivative spikes;
+- conditional altitude-integral handling plus bank-angle thrust compensation
+  to reduce height loss in fast turns;
+- persistent cage-violation grace, rather than an immediate descent on a
+  single near-boundary sample.
+
+The current configuration should be treated as a reviewed experiment baseline,
+not a ceiling. In `mocap-assisted-figure8-20260721-091750.csv`, the figure-8
+completed with no stale-mocap or safety event, then moved into controlled
+return/descent. Figure-8 median/p95/peak horizontal speed was
+`1.97 / 2.66 / 3.12 m/s`; median/p95/peak target error was
+`0.50 / 0.71 / 0.86 m`. The path clock spent much of the route governed below
+its nominal value, and pitch plus tilt compensation occasionally reached their
+limits. Those are the next performance constraints to assess before any
+further speed increase.
+
+Safety semantics were clarified during this campaign:
+
+- `Space` remains the only deliberate immediate zero-thrust operator command.
+- `Q`/Esc requests safety descent, then exits after the landing path finishes.
+- Automatic guards request safety descent; unexpected host cleanup attempts a
+  neutral mocap-guided descent before zeroing at the ground threshold.
+
+The hard-fall log `mocap-assisted-figure8-20260720-092217.csv` had continued
+script command thrust while height fell and pack voltage sagged to about
+`2.28 V`. Treat this as a likely power/device-side event until hardware testing
+shows otherwise. Battery enforcement remains disabled by operator choice; this
+does not make low-voltage operation safe.
+
+For every faster trial, review: terminal phase and stop reason; fresh/stale
+mocap spans; target-error distribution; path-clock scale; roll/pitch cap time;
+tilt-compensation cap time; height distribution and vertical speed; battery
+voltage; and return/landing behavior. Increase one coupled performance step at
+a time, then validate it with a new log.
+
+## 2026-07-17 Measured Cage Flight Corridors
+
+The edge-probe work has established conservative, repeatable horizontal
+corridors at approximately the normal 3 ft (`~0.91 m` above takeoff) flight
+height. These are **flight caps**, not surveyed physical cage dimensions: they
+include margin for marker coverage, controller stopping distance, and nearby
+pillars/obstacles. Keep an operator watching the vehicle and do not infer that
+tracking is safe outside these distances.
+
+| Relative direction | Verified cap | Evidence | Interpretation |
+| --- | ---: | --- | --- |
+| Forward | `5.0 m` | `mocap-cage-edge-probe-20260717-094258.csv` | Fresh tracking reached `4.95 m`; use the `5.0 m` cap. |
+| Backward | `4.5 m` | `mocap-cage-edge-probe-20260717-094258.csv` | Fresh tracking reached `4.44 m`; previous farther attempt encountered a pillar/dropout. |
+| Left | `3.0 m` | `mocap-cage-edge-probe-20260717-104848.csv` | Fresh tracking reached `2.86 m` and returned cleanly. A prior faster/farther attempt lost tracking beyond the intended corridor. |
+| Right | `3.5 m` | `mocap-cage-edge-probe-20260717-104848.csv` | Fresh tracking reached `3.41 m` and returned cleanly. A prior pass first went stale near `3.92 m`, so the cap leaves about `0.42 m` margin. |
+
+The successful lateral-only survey in
+`flight_logs/mocap-cage-edge-probe-20260717-104848.csv` is the current best
+horizontal coverage reference:
+
+- left outbound: `2.86 m` projected distance; right outbound: `3.41 m`;
+  both then returned to the center;
+- no stale mocap samples, no safety descent, and a maximum observed mocap
+  frame gap of `0.129 s` (normal samples were about `0.022 s` apart);
+- outbound height stayed within `0.89..1.06 m` above takeoff around the
+  captured `~0.96 m` target;
+- automatic center landing began after both legs and took about `9.9 s`.
+
+The direct return-to-center command can create a large intentional target
+error and brief high lateral speed estimates (up to roughly `3 m/s` in the
+successful lateral run). It worked in that run, but it is the aggressive part
+of the edge-probe profile. Do not increase return speed or the corridor caps
+without another controlled test and log review.
+
+Diagonal coverage is narrower than the independent axis corridors. In
+`mocap-cage-corner-probe-20260720-103251.csv`, the front-left route completed
+a fresh `1.5 s` dwell near `4.73 m` forward and `1.80 m` left, then returned
+to center. The front-right route became continuously stale at about `4.64 m`
+forward and `0.69 m` right before reaching its calculated diagonal point. This
+does not invalidate either axis cap; it shows that the OptiTrack camera/marker
+coverage is not rectangular at the front corners. Treat corner limits as
+corner-specific measured coverage, not intersections of the four axis caps.
+
+### Direct Manual Corner Coverage Survey
+
+The hand-carried, receive-only survey
+`flight_logs/mocap-corner-coverage.csv` directly measured sustained OptiTrack
+loss at all four corners on one chair-height plane. Its local frame was reset
+at the chair center, so the following are coverage-boundary coordinates, not
+world coordinates or automatic-flight limits:
+
+| Corner | Last fresh local coordinate before a 3 s dropout |
+| --- | --- |
+| Front-right | `(+3.790, -3.072, +0.004) m` |
+| Back-right | `(-3.687, -2.829, +0.030) m` |
+| Back-left | `(-3.967, +2.496, +0.011) m` |
+| Front-left | `(+3.598, +2.538, -0.017) m` |
+
+Normal tracking was approximately 48 Hz (20.8 ms median frame interval) and
+the recorded local Z span was only 5 cm, so this is a coherent single-height
+coverage layer. Before using any point in an autonomous path, retain at least
+0.30 m radial margin from these last-fresh points and validate that route in a
+powered flight; marker geometry, yaw, and altitude can shift the boundary.
 
 ## 2026-07-13 Current Manual-Flight Baseline
 
@@ -121,8 +238,10 @@ From no-flight calibration and user observations:
 - physical right = mocap `-X`
 - height = mocap `+Z`
 
-The physical left side of the cage has had poor mocap coverage. Prefer the
-smaller reliable flight area until coverage is improved.
+The physical left side of the cage has had poorer mocap coverage than the
+center. The current edge-probe caps above are the best available conservative
+working envelope; use them instead of treating the full visual cage extent as
+available flight space.
 
 The no-flight calibrator streams position only. It captures a center/mid-height
 origin while the drone is physically level and nose-front, then maps raw mocap

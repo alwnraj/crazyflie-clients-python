@@ -5,14 +5,19 @@
 > [`MOCAP_MANUAL_FIGURE8.md`](MOCAP_MANUAL_FIGURE8.md). The flight constants
 > and powered-flight status below are not the current manual-figure-8 baseline.
 
-## 2026-07-13 Status
+## 2026-07-21 Manual-Flight Status
 
 The verified powered-flight path is the low-level, manual-thrust workflow in
 `mocap_manual_thrust_assisted_figure8.py`: establish a low hover with `R`, use
 `T` to settle near 3 ft, press `F` for one figure-8, then press `F` again to
-return to the figure-8 start and land. The current baseline completed one
-48-second, cage-limited path at roughly `0.91 m` above start without a safety
-descent.
+return to the figure-8 start and land. The current compact fast-path campaign
+uses an error- and cage-governed `4.20x` nominal figure-8 clock with a `23 deg`
+figure-8-only attitude cap. The reviewed
+`mocap-assisted-figure8-20260721-091750.csv` run completed normally without
+stale mocap or a safety descent. Read
+[`MOCAP_MANUAL_FIGURE8.md`](MOCAP_MANUAL_FIGURE8.md) for current controls,
+safety semantics, active constants, and log evidence; this runbook intentionally
+does not duplicate manual-flight tuning.
 
 This does **not** clear the high-level-commander (HLC) safety hold below. HLC
 work still needs its independent orientation and estimator validation. Keep
